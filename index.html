@@ -1,0 +1,2697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maine WIC Meal Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #FAF7F2;
+    --warm-white: #FFFFFF;
+    --bark: #3D2B1F;
+    --bark-light: #6B4C3B;
+    --sage: #5A7A5C;
+    --sage-light: #EAF0EA;
+    --sage-mid: #8AAD8C;
+    --wic-blue: #1A4A7A;
+    --wic-blue-light: #E6EEF8;
+    --wic-blue-mid: #4A7AB5;
+    --amber: #C17E3A;
+    --amber-light: #FDF3E7;
+    --border: #E8E0D5;
+    --border-strong: #C8BAA8;
+    --text-primary: #2A1F18;
+    --text-secondary: #6B5A4E;
+    --text-muted: #9E8E83;
+    --shadow-sm: 0 1px 4px rgba(61,43,31,0.08);
+    --shadow-md: 0 4px 16px rgba(61,43,31,0.10);
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--text-primary);
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--bark);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .logo-icon {
+    width: 36px;
+    height: 36px;
+    background: var(--sage);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+  .logo-text {
+    font-family: 'Lora', serif;
+    font-size: 18px;
+    color: #FAF7F2;
+    font-weight: 600;
+  }
+  .logo-sub {
+    font-size: 11px;
+    color: rgba(250,247,242,0.55);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  nav {
+    display: flex;
+    gap: 4px;
+  }
+  nav button {
+    background: none;
+    border: none;
+    color: rgba(250,247,242,0.65);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-weight: 400;
+  }
+  nav button:hover { background: rgba(255,255,255,0.08); color: #FAF7F2; }
+  nav button.active { background: rgba(255,255,255,0.13); color: #FAF7F2; font-weight: 500; }
+
+  /* ── Main layout ── */
+  main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+
+  /* ── Page sections ── */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── Upload zone ── */
+  .upload-section {
+    background: var(--warm-white);
+    border: 2px dashed var(--border-strong);
+    border-radius: var(--radius-lg);
+    padding: 3rem 2rem;
+    text-align: center;
+    transition: all 0.2s;
+    cursor: pointer;
+    position: relative;
+  }
+  .upload-section:hover, .upload-section.drag-over {
+    border-color: var(--sage);
+    background: var(--sage-light);
+  }
+  .upload-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    display: block;
+  }
+  .upload-title {
+    font-family: 'Lora', serif;
+    font-size: 22px;
+    color: var(--bark);
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+  }
+  .upload-sub {
+    color: var(--text-secondary);
+    font-size: 15px;
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+  }
+  .upload-section input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+  .btn-primary {
+    background: var(--sage);
+    color: white;
+    border: none;
+    padding: 12px 28px;
+    border-radius: var(--radius-md);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-primary:hover { background: #4A6A4C; transform: translateY(-1px); box-shadow: var(--shadow-md); }
+  .btn-secondary {
+    background: transparent;
+    color: var(--bark);
+    border: 1.5px solid var(--border-strong);
+    padding: 10px 22px;
+    border-radius: var(--radius-md);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-secondary:hover { background: var(--border); }
+
+  /* ── Stats bar ── */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin: 1.5rem 0;
+  }
+  .stat-card {
+    background: var(--warm-white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1rem 1.25rem;
+    text-align: center;
+  }
+  .stat-num {
+    font-family: 'Lora', serif;
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--bark);
+    display: block;
+  }
+  .stat-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 2px;
+  }
+
+  /* ── Toolbar ── */
+  .toolbar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .search-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+  }
+  .search-wrap input {
+    width: 100%;
+    padding: 10px 16px 10px 40px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    background: var(--warm-white);
+    color: var(--text-primary);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .search-wrap input:focus { border-color: var(--sage); }
+  .search-icon {
+    position: absolute;
+    left: 13px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 15px;
+    pointer-events: none;
+  }
+  .filter-btn {
+    background: var(--warm-white);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: 10px 16px;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .filter-btn:hover, .filter-btn.active {
+    background: var(--sage-light);
+    border-color: var(--sage-mid);
+    color: var(--sage);
+  }
+
+  /* ── Recipe grid ── */
+  .recipe-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.25rem;
+  }
+
+  /* ── Recipe card ── */
+  .recipe-card {
+    background: var(--warm-white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+  }
+  .recipe-card:hover {
+    border-color: var(--sage-mid);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+  .recipe-card-body {
+    padding: 1.1rem 1.25rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .recipe-name {
+    font-family: 'Lora', serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--bark);
+    margin-bottom: 8px;
+    line-height: 1.35;
+  }
+  .recipe-meta {
+    display: flex;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .recipe-meta span { display: flex; align-items: center; gap: 4px; }
+  .wic-score {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: auto;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+  .wic-bar-wrap {
+    flex: 1;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .wic-bar {
+    height: 100%;
+    background: var(--sage);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+  }
+  .wic-pct {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--sage);
+    min-width: 30px;
+    text-align: right;
+  }
+  .wic-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .ingredient-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+  .tag {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-weight: 400;
+  }
+  .tag-wic {
+    background: var(--sage-light);
+    color: var(--sage);
+    border: 1px solid #C5DCC6;
+  }
+  .tag-buy {
+    background: var(--amber-light);
+    color: var(--amber);
+    border: 1px solid #F2D5AA;
+  }
+
+  /* ── Recipe modal ── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(42,31,24,0.55);
+    z-index: 200;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 2rem 1rem;
+    overflow-y: auto;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .modal-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .modal {
+    background: var(--warm-white);
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 680px;
+    box-shadow: 0 20px 60px rgba(42,31,24,0.25);
+    transform: translateY(16px);
+    transition: transform 0.2s;
+    overflow: hidden;
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal-header {
+    background: var(--bark);
+    padding: 1.5rem 1.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  .modal-title {
+    font-family: 'Lora', serif;
+    font-size: 20px;
+    color: #FAF7F2;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+  .modal-close {
+    background: rgba(255,255,255,0.12);
+    border: none;
+    color: rgba(250,247,242,0.8);
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  .modal-close:hover { background: rgba(255,255,255,0.2); }
+  .modal-meta-bar {
+    display: flex;
+    gap: 20px;
+    padding: 1rem 1.75rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text-secondary);
+    flex-wrap: wrap;
+    background: #FDFCFA;
+  }
+  .modal-meta-bar span { display: flex; align-items: center; gap: 5px; }
+  .modal-body { padding: 1.5rem 1.75rem; display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+  @media (max-width: 600px) { .modal-body { grid-template-columns: 1fr; } }
+  .modal-section-title {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 0.75rem;
+  }
+  .ingredient-list { list-style: none; }
+  .ingredient-list li {
+    font-size: 14px;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-primary);
+    line-height: 1.4;
+  }
+  .ingredient-list li:last-child { border-bottom: none; }
+  .ing-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .ing-dot.wic { background: #1E7E34; box-shadow: 0 0 0 2px #A8D5B0; }
+  .ing-dot.buy { background: #B03A2E; box-shadow: 0 0 0 2px #F1A89E; }
+  .directions-text {
+    font-size: 14px;
+    line-height: 1.75;
+    color: var(--text-secondary);
+  }
+  .directions-text p { margin-bottom: 0.75rem; }
+  .wic-summary-box {
+    margin: 0 1.75rem 1.5rem;
+    background: var(--sage-light);
+    border: 1px solid #C5DCC6;
+    border-radius: var(--radius-md);
+    padding: 0.875rem 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .wic-summary-icon { font-size: 20px; }
+  .wic-summary-text { font-size: 13px; color: var(--sage); line-height: 1.5; }
+  .wic-summary-text strong { font-weight: 500; color: #3D6B3F; }
+
+  /* ── WIC Benefits page ── */
+  .benefits-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+  .benefit-card {
+    background: var(--warm-white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+  }
+  .benefit-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 0.75rem;
+  }
+  .benefit-icon {
+    font-size: 22px;
+    width: 40px;
+    height: 40px;
+    background: var(--sage-light);
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .benefit-name {
+    font-family: 'Lora', serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--bark);
+  }
+  .benefit-who {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 1px;
+  }
+  .benefit-items {
+    list-style: none;
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.9;
+  }
+  .benefit-items li::before { content: "· "; color: var(--sage-mid); }
+  .benefit-note {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--amber);
+    background: var(--amber-light);
+    border-radius: var(--radius-sm);
+    padding: 5px 10px;
+  }
+
+  /* ── Household summary ── */
+  .household-banner {
+    background: var(--wic-blue);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .hh-title {
+    font-family: 'Lora', serif;
+    font-size: 16px;
+    color: white;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .hh-sub { font-size: 12px; color: rgba(255,255,255,0.65); }
+  .hh-members { display: flex; gap: 12px; flex-wrap: wrap; }
+  .hh-member {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: var(--radius-md);
+    padding: 8px 14px;
+    text-align: center;
+    min-width: 110px;
+  }
+  .hh-member-icon { font-size: 20px; margin-bottom: 2px; }
+  .hh-member-name { font-size: 12px; color: rgba(255,255,255,0.9); font-weight: 500; }
+  .hh-member-note { font-size: 10px; color: rgba(255,255,255,0.55); margin-top: 2px; }
+
+  /* ── Empty / loading states ── */
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-muted);
+  }
+  .empty-state-icon { font-size: 3rem; margin-bottom: 1rem; display: block; }
+  .empty-state-title { font-family: 'Lora', serif; font-size: 20px; color: var(--bark); margin-bottom: 0.5rem; }
+  .empty-state-sub { font-size: 14px; line-height: 1.6; max-width: 360px; margin: 0 auto; }
+
+  .page-header {
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .page-title {
+    font-family: 'Lora', serif;
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--bark);
+  }
+  .page-sub {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-top: 3px;
+  }
+
+  /* ── Coming soon banner ── */
+  .coming-soon {
+    background: var(--wic-blue-light);
+    border: 1px solid var(--wic-blue-mid);
+    border-radius: var(--radius-lg);
+    padding: 3rem 2rem;
+    text-align: center;
+    margin-top: 2rem;
+  }
+  .coming-soon-icon { font-size: 2.5rem; margin-bottom: 1rem; display: block; }
+  .coming-soon h2 { font-family: 'Lora', serif; font-size: 20px; color: var(--wic-blue); margin-bottom: 0.5rem; font-weight: 600; }
+  .coming-soon p { font-size: 14px; color: var(--wic-blue-mid); line-height: 1.6; max-width: 400px; margin: 0 auto; }
+
+  .rating-stars { color: #C17E3A; font-size: 12px; }
+
+  /* ── Planner ── */
+  .planner-section {
+    background: var(--warm-white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+  .planner-section-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 1.25rem;
+  }
+  .planner-step-badge {
+    width: 28px;
+    height: 28px;
+    background: var(--bark);
+    color: #FAF7F2;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 500;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .planner-section-title {
+    font-family: 'Lora', serif;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--bark);
+  }
+  .planner-section-sub {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 3px;
+    line-height: 1.5;
+  }
+  .anchor-search-wrap {
+    position: relative;
+    margin-bottom: 0.75rem;
+  }
+  .anchor-search-wrap input {
+    width: 100%;
+    padding: 10px 16px 10px 40px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    background: var(--cream);
+    color: var(--text-primary);
+    outline: none;
+  }
+  .anchor-search-wrap input:focus { border-color: var(--sage); }
+  .anchor-search-wrap .search-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); pointer-events: none; }
+  .anchor-results {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 220px;
+    overflow-y: auto;
+    margin-bottom: 0.75rem;
+  }
+  .anchor-result-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background 0.12s;
+    gap: 12px;
+  }
+  .anchor-result-row:hover { background: var(--sage-light); }
+  .anchor-result-row.already-added { opacity: 0.4; pointer-events: none; }
+  .anchor-result-name { font-size: 14px; color: var(--text-primary); }
+  .anchor-result-wic { font-size: 12px; color: var(--sage); }
+  .anchor-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .anchor-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bark);
+    color: #FAF7F2;
+    border-radius: var(--radius-md);
+    padding: 7px 12px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .anchor-chip button {
+    background: rgba(255,255,255,0.15);
+    border: none;
+    color: rgba(250,247,242,0.8);
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    line-height: 1;
+  }
+  .anchor-chip button:hover { background: rgba(255,255,255,0.25); }
+
+  /* Suggestion cards */
+  .suggestion-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+  }
+  .suggestion-card {
+    background: var(--cream);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 0.875rem 1rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .suggestion-card:hover { border-color: var(--sage-mid); background: var(--sage-light); }
+  .suggestion-card.added { border-color: var(--sage); background: var(--sage-light); opacity: 0.6; pointer-events: none; }
+  .suggestion-name { font-size: 13px; font-weight: 500; color: var(--bark); margin-bottom: 5px; line-height: 1.35; }
+  .suggestion-overlap { font-size: 11px; color: var(--sage); margin-bottom: 4px; }
+  .suggestion-wic { font-size: 11px; color: var(--text-muted); }
+  .suggestion-add-btn {
+    margin-top: 8px;
+    font-size: 11px;
+    padding: 4px 10px;
+    background: var(--sage);
+    color: white;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* Week grid */
+  .week-grid {
+    display: grid;
+    grid-template-columns: 80px repeat(7, 1fr);
+    gap: 6px;
+  }
+  .week-header {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    text-align: center;
+    padding: 6px 4px;
+  }
+  .week-row-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .week-cell {
+    min-height: 72px;
+    border: 1.5px dashed var(--border-strong);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    padding: 6px;
+    position: relative;
+    background: var(--cream);
+  }
+  .week-cell:hover { border-color: var(--sage); background: var(--sage-light); }
+  .week-cell.filled {
+    border-style: solid;
+    border-color: var(--border);
+    background: var(--warm-white);
+    align-items: flex-start;
+    flex-direction: column;
+    cursor: default;
+  }
+  .week-cell.filled:hover { border-color: var(--border-strong); background: var(--warm-white); }
+  .week-cell-empty-hint { font-size: 11px; color: var(--text-muted); text-align: center; }
+  .week-cell-name { font-size: 11px; font-weight: 500; color: var(--bark); line-height: 1.3; margin-bottom: 4px; }
+  .week-cell-wic { font-size: 10px; color: var(--sage); }
+  .week-cell-clear {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .week-cell.filled:hover .week-cell-clear { opacity: 1; }
+  .week-cell-anchor { border-color: var(--bark) !important; border-width: 2px !important; }
+  .anchor-dot {
+    width: 6px; height: 6px;
+    background: var(--bark);
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 4px;
+    flex-shrink: 0;
+  }
+
+  /* Picker list */
+  .picker-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    gap: 12px;
+    transition: background 0.12s;
+  }
+  .picker-row:hover { background: var(--sage-light); }
+  .picker-row-name { font-size: 14px; color: var(--text-primary); }
+  .picker-row-wic { font-size: 12px; color: var(--sage); white-space: nowrap; }
+
+  /* Shopping list */
+  .shopping-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+  .shopping-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+  }
+  @media (max-width: 640px) { .shopping-columns { grid-template-columns: 1fr; } }
+  .shopping-col {
+    background: var(--warm-white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  .shopping-col-header {
+    padding: 1rem 1.25rem;
+    font-family: 'Lora', serif;
+    font-size: 15px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .shopping-col-header.wic-col { background: var(--sage-light); color: #2D5E30; border-bottom: 1px solid #C5DCC6; }
+  .shopping-col-header.buy-col { background: var(--amber-light); color: #7A4E1A; border-bottom: 1px solid #F2D5AA; }
+  .shopping-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 9px 1.25rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+    color: var(--text-primary);
+  }
+  .shopping-item:last-child { border-bottom: none; }
+  .shopping-item input[type="checkbox"] { margin-top: 2px; flex-shrink: 0; accent-color: var(--sage); width: 15px; height: 15px; cursor: pointer; }
+  .shopping-item label { cursor: pointer; line-height: 1.4; flex: 1; }
+  .shopping-item label.checked { text-decoration: line-through; color: var(--text-muted); }
+  .shopping-qty { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+  .source-link { font-size: 12px; color: var(--wic-blue-mid); text-decoration: none; }
+  .source-link:hover { text-decoration: underline; }
+
+  /* ── Edit mode ── */
+  .edit-ing-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .edit-ing-row:last-child { border-bottom: none; }
+  .edit-ing-input {
+    flex: 1;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    padding: 5px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--cream);
+    color: var(--text-primary);
+    outline: none;
+  }
+  .edit-ing-input:focus { border-color: var(--sage); }
+  .edit-wic-toggle {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    border: 1px solid;
+    cursor: pointer;
+    white-space: nowrap;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+  }
+  .edit-wic-toggle.is-wic {
+    background: var(--sage-light);
+    color: var(--sage);
+    border-color: #C5DCC6;
+  }
+  .edit-wic-toggle.not-wic {
+    background: var(--amber-light);
+    color: var(--amber);
+    border-color: #F2D5AA;
+  }
+  .edit-delete-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    line-height: 1;
+    transition: all 0.15s;
+  }
+  .edit-delete-btn:hover { background: #FDECEA; color: #C0392B; }
+  .edit-add-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .edit-add-input {
+    flex: 1;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    padding: 7px 10px;
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--cream);
+    color: var(--text-primary);
+    outline: none;
+  }
+  .edit-add-input:focus { border-color: var(--sage); border-style: solid; }
+  .btn-edit {
+    background: transparent;
+    border: 1.5px solid var(--border-strong);
+    color: var(--bark-light);
+    padding: 6px 14px;
+    border-radius: var(--radius-md);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-edit:hover { background: var(--border); }
+  .btn-save {
+    background: var(--sage);
+    border: none;
+    color: white;
+    padding: 8px 18px;
+    border-radius: var(--radius-md);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-save:hover { background: #4A6A4C; }
+  .modal-footer {
+    padding: 1rem 1.75rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    background: #FDFCFA;
+  }
+  .edit-name-input {
+    font-family: 'Lora', serif;
+    font-size: 18px;
+    font-weight: 600;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: var(--radius-sm);
+    color: #FAF7F2;
+    padding: 4px 10px;
+    width: 100%;
+    outline: none;
+  }
+  .edit-name-input:focus { border-color: rgba(255,255,255,0.5); }
+  .edit-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    font-style: italic;
+  }
+
+  /* ── Notes section ── */
+  .modal-notes-section {
+    margin: 0 1.75rem 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border);
+  }
+  .notes-view {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.7;
+    min-height: 24px;
+    white-space: pre-wrap;
+  }
+  .notes-view.empty {
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 13px;
+  }
+  .notes-textarea {
+    width: 100%;
+    min-height: 100px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    line-height: 1.7;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--cream);
+    color: var(--text-primary);
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .notes-textarea:focus { border-color: var(--sage); }
+
+  /* ── Editable directions ── */
+  .edit-directions-textarea {
+    width: 100%;
+    min-height: 180px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    line-height: 1.75;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--cream);
+    color: var(--text-primary);
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .edit-directions-textarea:focus { border-color: var(--sage); }
+
+  /* ── Notes badge on recipe card ── */
+  .card-notes-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--wic-blue-mid);
+    background: var(--wic-blue-light);
+    border: 1px solid #BDD0EA;
+    border-radius: 20px;
+    padding: 2px 8px;
+    margin-top: 6px;
+  }
+  .card-veg-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #2D6A4F;
+    background: #D8F3DC;
+    border: 1px solid #95D5B2;
+    border-radius: 20px;
+    padding: 2px 8px;
+    margin-top: 6px;
+    margin-left: 4px;
+  }
+
+  /* ── Favorite sites bar ── */
+  .fav-sites-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    background: var(--warm-white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    margin-bottom: 1.25rem;
+  }
+  .fav-sites-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+  }
+  .fav-site-btn {
+    font-size: 12px;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--wic-blue);
+    background: var(--wic-blue-light);
+    border: 1px solid #BDD0EA;
+    border-radius: 20px;
+    padding: 5px 12px;
+    text-decoration: none;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .fav-site-btn:hover { background: #d0e3f5; border-color: var(--wic-blue-mid); }
+
+  /* ── URL import ── */
+  .fav-import-btn {
+    font-size: 12px;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--wic-blue);
+    background: var(--wic-blue-light);
+    border: 1px solid #BDD0EA;
+    border-radius: 20px;
+    padding: 5px 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .fav-import-btn:hover { background: #d0e3f5; }
+  .import-status-box {
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 0.75rem;
+  }
+  .import-status-box.loading { background: var(--wic-blue-light); color: var(--wic-blue); border: 1px solid #BDD0EA; }
+  .import-status-box.error { background: #FDECEA; color: #922B21; border: 1px solid #F1948A; }
+  .import-status-box.success { background: var(--sage-light); color: #2D5E30; border: 1px solid #C5DCC6; }
+  .import-preview-box {
+    background: var(--cream);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1rem 1.25rem;
+  }
+  .import-preview-name {
+    font-family: 'Lora', serif;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--bark);
+    margin-bottom: 8px;
+  }
+  .import-preview-meta {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .import-preview-ings {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.8;
+    max-height: 140px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+  }
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* source link */
+  .source-link { font-size: 12px; color: var(--wic-blue-mid); text-decoration: none; }
+  .source-link:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🌿</div>
+    <div>
+      <div class="logo-text">WIC Meal Planner</div>
+      <div class="logo-sub">Maine • 2026</div>
+    </div>
+  </div>
+  <nav>
+    <button class="active" onclick="showPage('recipes')">📚 Recipes</button>
+    <button onclick="showPage('benefits')">🛒 WIC Benefits</button>
+    <button onclick="showPage('planner')">📅 Meal Planner</button>
+    <button onclick="showPage('shopping')">🧾 Shopping List</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ══ RECIPES PAGE ══ -->
+  <div id="page-recipes" class="page active">
+    <div class="page-header">
+      <div>
+        <div class="page-title">My Recipe Library</div>
+        <div class="page-sub" id="library-sub">Import your Paprika recipes to get started</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn-secondary" onclick="openUrlImport()">🌐 Import from URL</button>
+        <button class="btn-primary" onclick="document.getElementById('file-input').click()">📁 Import Paprika Files</button>
+      </div>
+    </div>
+
+    <!-- Favorite sites quick bar -->
+    <div class="fav-sites-bar">
+      <span class="fav-sites-label">Quick open:</span>
+      <a class="fav-site-btn" href="https://smittenkitchen.com" target="_blank">🥘 Smitten Kitchen</a>
+      <a class="fav-site-btn" href="https://pinchofyum.com" target="_blank">🌿 Pinch of Yum</a>
+      <a class="fav-site-btn" href="https://whatsgabycooking.com" target="_blank">🍋 What's Gaby Cooking</a>
+      <a class="fav-site-btn" href="https://plantyou.com" target="_blank">🌱 PlantYou</a>
+      <a class="fav-site-btn" href="https://thekitchn.com" target="_blank">🔪 The Kitchn</a>
+    </div>
+
+    <!-- Upload zone (shown until recipes loaded) -->
+    <div class="upload-section" id="upload-zone">
+      <input type="file" id="file-input" accept=".html" multiple onchange="handleFiles(this.files)">
+      <span class="upload-icon">📂</span>
+      <div class="upload-title">Drop your Paprika HTML files here</div>
+      <div class="upload-sub">Select all 63 recipe files at once — the app will read<br>and organize them automatically.</div>
+      <label class="btn-primary" style="cursor:pointer; display:inline-flex; gap:8px; align-items:center;" onclick="document.getElementById('file-input').click(); event.stopPropagation();">
+        📁 Choose Files
+      </label>
+    </div>
+
+    <!-- Stats (hidden until recipes loaded) -->
+    <div id="stats-section" style="display:none;">
+      <div class="stats-bar">
+        <div class="stat-card">
+          <span class="stat-num" id="stat-total">0</span>
+          <span class="stat-label">Recipes</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-num" id="stat-wic-high">0</span>
+          <span class="stat-label">High WIC Coverage</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-num" id="stat-avg-wic">0%</span>
+          <span class="stat-label">Avg WIC Score</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-num" id="stat-sources">0</span>
+          <span class="stat-label">Recipe Sources</span>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search-input" placeholder="Search recipes or ingredients…" oninput="filterRecipes()">
+        </div>
+        <button class="filter-btn active" onclick="setFilter('all', this)">All</button>
+        <button class="filter-btn" onclick="setFilter('high-wic', this)">⭐ High WIC</button>
+        <button class="filter-btn" onclick="setFilter('lunch', this)">Lunch</button>
+        <button class="filter-btn" onclick="setFilter('dinner', this)">Dinner</button>
+      </div>
+
+      <div class="recipe-grid" id="recipe-grid"></div>
+    </div>
+  </div>
+
+  <!-- ══ BENEFITS PAGE ══ -->
+  <div id="page-benefits" class="page">
+    <div class="page-header">
+      <div>
+        <div class="page-title">WIC Benefits</div>
+        <div class="page-sub">Your household's Maine WIC approved food categories</div>
+      </div>
+    </div>
+
+    <div class="household-banner">
+      <div>
+        <div class="hh-title">Your Household</div>
+        <div class="hh-sub">Benefits active as of April 2026</div>
+      </div>
+      <div class="hh-members">
+        <div class="hh-member">
+          <div class="hh-member-icon">🧒</div>
+          <div class="hh-member-name">Child (1–5)</div>
+          <div class="hh-member-note">Active</div>
+        </div>
+        <div class="hh-member">
+          <div class="hh-member-icon">👩</div>
+          <div class="hh-member-name">Postpartum Mom</div>
+          <div class="hh-member-note">Until Sept 2026</div>
+        </div>
+        <div class="hh-member">
+          <div class="hh-member-icon">👶</div>
+          <div class="hh-member-name">Infant × 2</div>
+          <div class="hh-member-note">Formula + food</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="benefits-grid">
+      <div class="benefit-card">
+        <div class="benefit-card-header">
+          <div class="benefit-icon">🥦</div>
+          <div>
+            <div class="benefit-name">Fruits & Vegetables</div>
+            <div class="benefit-who">Child + Mom</div>
+          </div>
+        </div>
+        <ul class="benefit-items">
+          <li>Any fresh fruit or vegetable</li>
+          <li>Frozen (no added sauces/sugars)</li>
+          <li>Canned in water or 100% juice</li>
+          <li>Dried (no added sugar/oil)</li>
+        </ul>
+        <div class="benefit-note">~$26/mo (child) + ~$47/mo (mom)</div>
+      </div>
+
+      <div class="benefit-card">
+        <div class="benefit-card-header">
+          <div class="benefit-icon">🥛</div>
+          <div>
+            <div class="benefit-name">Milk & Dairy</div>
+            <div class="benefit-who">Child + Mom</div>
+          </div>
+        </div>
+        <ul class="benefit-items">
+          <li>Whole, 1%, 2%, or skim milk</li>
+          <li>Cheese (WIC-approved brands/sizes)</li>
+          <li>Yogurt (low-fat or nonfat)</li>
+          <li>Powdered nonfat dry milk</li>
+        </ul>
+      </div>
+
+      <div class="benefit-card">
+        <div class="benefit-card-header">
+          <div class="benefit-icon">🌾</div>
+          <div>
+            <div class="benefit-name">Whole Grains</div>
+            <div class="benefit-who">Child + Mom</div>
+          </div>
+        </div>
+        <ul class="benefit-items">
+          <li>100% whole wheat bread</li>
+          <li>Brown rice</li>
+          <li>Whole wheat pasta</li>
+          <li>Oatmeal</li>
+          <li>Corn or whole wheat tortillas</li>
+        </ul>
+      </div>
+
+      <div class="benefit-card">
+        <div class="benefit-card-header">
+          <div class="benefit-icon">🥚</div>
+          <div>
+            <div class="benefit-name">Eggs & Protein</div>
+            <div class="benefit-who">Child + Mom</div>
+          </div>
+        </div>
+        <ul class="benefit-items">
+          <li>Eggs (any size, white or brown)</li>
+          <li>Peanut butter (creamy or chunky)</li>
+          <li>Canned beans (black, kidney, etc.)</li>
+          <li>Dry beans, lentils & peas</li>
+        </ul>
+      </div>
+
+      <div class="benefit-card">
+        <div class="benefit-card-header">
+          <div class="benefit-icon">🐟</div>
+          <div>
+            <div class="benefit-name">Canned Fish</div>
+            <div class="benefit-who">Mom only</div>
+          </div>
+        </div>
+        <ul class="benefit-items">
+          <li>Light tuna (canned)</li>
+          <li>Salmon (canned)</li>
+          <li>Sardines (canned)</li>
+          <li>Mackerel (canned)</li>
+        </ul>
+        <div class="benefit-note">Postpartum benefit — expires Sept 2026</div>
+      </div>
+
+      <div class="benefit-card">
+        <div class="benefit-card-header">
+          <div class="benefit-icon">🥣</div>
+          <div>
+            <div class="benefit-name">Cereal & Juice</div>
+            <div class="benefit-who">Child + Mom</div>
+          </div>
+        </div>
+        <ul class="benefit-items">
+          <li>WIC-approved whole grain cereals</li>
+          <li>100% fruit or vegetable juice</li>
+          <li>Specific brands/sizes apply</li>
+        </ul>
+      </div>
+
+      <div class="benefit-card">
+        <div class="benefit-card-header">
+          <div class="benefit-icon">👶</div>
+          <div>
+            <div class="benefit-name">Infant Foods</div>
+            <div class="benefit-who">2 Infants</div>
+          </div>
+        </div>
+        <ul class="benefit-items">
+          <li>Similac formula (Abbott brand)</li>
+          <li>Infant cereal (oatmeal, rice, barley)</li>
+          <li>Infant fruits & vegetables</li>
+          <li>Infant meats (beef, chicken, turkey)</li>
+        </ul>
+        <div class="benefit-note">Not used in meal planning recipes</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PLANNER PAGE ══ -->
+  <div id="page-planner" class="page">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Weekly Meal Planner</div>
+        <div class="page-sub" id="planner-sub">Pick anchor recipes, then fill out your week</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-secondary" onclick="clearWeek()">🗑 Clear Week</button>
+        <button class="btn-primary" onclick="goToShopping()">🧾 Generate Shopping List →</button>
+      </div>
+    </div>
+
+    <!-- No recipes warning -->
+    <div id="planner-no-recipes" style="display:none;">
+      <div class="coming-soon">
+        <span class="coming-soon-icon">📚</span>
+        <h2>Import your recipes first</h2>
+        <p>Head to the Recipes tab and import your Paprika files, then come back here to plan your week.</p>
+      </div>
+    </div>
+
+    <div id="planner-content">
+      <!-- Step 1: Anchor recipe picker -->
+      <div class="planner-section">
+        <div class="planner-section-header">
+          <div class="planner-step-badge">1</div>
+          <div>
+            <div class="planner-section-title">Choose anchor recipes</div>
+            <div class="planner-section-sub">Pick 1–3 recipes you definitely want this week. The app will suggest others that share ingredients.</div>
+          </div>
+        </div>
+        <div class="anchor-search-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="anchor-search" placeholder="Search recipes to add as anchors…" oninput="renderAnchorSearch()" autocomplete="off">
+        </div>
+        <div id="anchor-search-results" class="anchor-results"></div>
+        <div id="anchor-chips" class="anchor-chips"></div>
+      </div>
+
+      <!-- Step 2: Suggestions -->
+      <div class="planner-section" id="suggestions-section" style="display:none;">
+        <div class="planner-section-header">
+          <div class="planner-step-badge">2</div>
+          <div>
+            <div class="planner-section-title">Suggested recipes</div>
+            <div class="planner-section-sub">These share the most ingredients with your anchors — less waste, fewer things to buy.</div>
+          </div>
+        </div>
+        <div id="suggestion-cards" class="suggestion-grid"></div>
+      </div>
+
+      <!-- Step 3: Weekly grid -->
+      <div class="planner-section">
+        <div class="planner-section-header">
+          <div class="planner-step-badge">3</div>
+          <div>
+            <div class="planner-section-title">Your week</div>
+            <div class="planner-section-sub">Drag from suggestions above or click a cell to pick from your full library.</div>
+          </div>
+        </div>
+        <div class="week-grid" id="week-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SHOPPING PAGE ══ -->
+  <div id="page-shopping" class="page">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Shopping List</div>
+        <div class="page-sub" id="shopping-sub">Generated from your weekly meal plan</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-secondary" onclick="copyShoppingList()">📋 Copy List</button>
+        <button class="btn-primary" onclick="window.print()">🖨 Print</button>
+      </div>
+    </div>
+    <div id="shopping-empty" class="coming-soon">
+      <span class="coming-soon-icon">📅</span>
+      <h2>Plan your week first</h2>
+      <p>Head to the Meal Planner tab, fill in your week, then click "Generate Shopping List" to see everything here.</p>
+    </div>
+    <div id="shopping-content" style="display:none;">
+      <div class="shopping-summary" id="shopping-summary"></div>
+      <div class="shopping-columns" id="shopping-columns"></div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ══ Recipe Picker Modal (for week grid cells) ══ -->
+<div class="modal-overlay" id="picker-overlay" onclick="if(event.target===this)closePickerModal()">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-header">
+      <div class="modal-title" id="picker-title">Choose a recipe</div>
+      <button class="modal-close" onclick="closePickerModal()">✕</button>
+    </div>
+    <div style="padding:1rem 1.75rem;">
+      <div class="search-wrap" style="margin-bottom:1rem;">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="picker-search" placeholder="Search…" oninput="renderPickerList()" autocomplete="off">
+      </div>
+      <div id="picker-list" style="max-height:360px;overflow-y:auto;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Recipe Modal ══ -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div id="modal-title-wrap" style="flex:1;">
+        <div class="modal-title" id="modal-title">Recipe Name</div>
+        <input class="edit-name-input" id="modal-name-input" style="display:none;" type="text">
+      </div>
+      <button class="btn-edit" id="edit-toggle-btn" onclick="toggleEditMode()" style="border-color:rgba(255,255,255,0.3);color:rgba(250,247,242,0.8);background:rgba(255,255,255,0.08);font-size:12px;padding:5px 12px;">✏️ Edit</button>
+      <button class="modal-close" onclick="closeModalDirect()">✕</button>
+    </div>
+    <div class="modal-meta-bar" id="modal-meta"></div>
+    <div class="wic-summary-box" id="modal-wic-summary"></div>
+    <div class="modal-body">
+      <div>
+        <div class="modal-section-title">Ingredients</div>
+        <ul class="ingredient-list" id="modal-ingredients"></ul>
+      </div>
+      <div>
+        <div class="modal-section-title">Directions</div>
+        <div class="directions-text" id="modal-directions"></div>
+        <textarea class="edit-directions-textarea" id="modal-directions-edit" style="display:none;" placeholder="Edit directions…"></textarea>
+      </div>
+    </div>
+    <div class="modal-notes-section" id="modal-notes-section">
+      <div class="modal-section-title" style="margin-bottom:0.5rem;">📝 Notes</div>
+      <div class="notes-view" id="notes-view"></div>
+      <textarea class="notes-textarea" id="notes-edit" style="display:none;" placeholder="Add your notes here — e.g. how you swapped chicken for tofu, adjustments that worked well, family ratings…"></textarea>
+    </div>
+  </div>
+  <div class="modal-footer" id="modal-footer" style="display:none;">
+    <button class="btn-edit" onclick="cancelEdit()">Cancel</button>
+    <button class="btn-save" onclick="saveEdit()">💾 Save Changes</button>
+  </div>
+</div>
+
+<!-- ══ URL Import Modal ══ -->
+<div class="modal-overlay" id="url-import-overlay" onclick="if(event.target===this)closeUrlImport()">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header">
+      <div class="modal-title">🌐 Import Recipe from URL</div>
+      <button class="modal-close" onclick="closeUrlImport()">✕</button>
+    </div>
+    <div style="padding:1.5rem 1.75rem;">
+
+      <!-- Favorite sites quick links -->
+      <div style="margin-bottom:1.25rem;">
+        <div class="modal-section-title" style="margin-bottom:0.5rem;">Your favorite sites</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          <button class="fav-import-btn" onclick="setImportUrl('https://smittenkitchen.com')">🥘 Smitten Kitchen</button>
+          <button class="fav-import-btn" onclick="setImportUrl('https://pinchofyum.com')">🌿 Pinch of Yum</button>
+          <button class="fav-import-btn" onclick="setImportUrl('https://whatsgabycooking.com')">🍋 What's Gaby Cooking</button>
+          <button class="fav-import-btn" onclick="setImportUrl('https://plantyou.com')">🌱 PlantYou</button>
+          <button class="fav-import-btn" onclick="setImportUrl('https://thekitchn.com')">🔪 The Kitchn</button>
+        </div>
+      </div>
+
+      <!-- URL input -->
+      <div class="modal-section-title" style="margin-bottom:0.5rem;">Paste a recipe URL</div>
+      <div style="display:flex;gap:8px;margin-bottom:0.75rem;">
+        <input type="url" id="url-import-input" placeholder="https://smittenkitchen.com/recipe/…"
+          style="flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-md);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;background:var(--cream);color:var(--text-primary);"
+          onkeydown="if(event.key==='Enter')startUrlImport()"
+          oninput="document.getElementById('url-import-input').style.borderColor='var(--border)'">
+        <button class="btn-primary" onclick="startUrlImport()" id="url-import-btn">Import</button>
+      </div>
+
+      <!-- Status / preview area -->
+      <div id="url-import-status" style="display:none;"></div>
+      <div id="url-import-preview" style="display:none;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── WIC Eligibility Engine (based on official Maine WIC food list) ──
+//
+// STEP 1: Disqualifiers — if any of these words/phrases appear, it's NOT WIC-eligible
+// even if a WIC food name also appears (e.g. "garlic powder", "hot sauce", "olive oil")
+const WIC_DISQUALIFIERS = [
+  // Spices, seasonings & powders
+  'powder','seasoning','spice','extract','flavoring','flakes',
+  'dried herb','basil','parsley','chive','chili flake','red pepper flake',
+  'cayenne','cumin','coriander','paprika','turmeric','oregano','thyme',
+  'rosemary','bay leaf','bay leaves','curry','garam masala','allspice',
+  'cinnamon','nutmeg','clove','cardamom','anise','fennel seed',
+  'mustard seed','celery seed','dill weed','tarragon','sage','marjoram',
+  // Condiments & sauces
+  'hot sauce','sriracha','soy sauce','fish sauce','worcestershire',
+  'ketchup','salsa','marinara','pasta sauce','tomato sauce','pizza sauce',
+  'hoisin','oyster sauce','teriyaki','bbq sauce','buffalo sauce',
+  'vinegar','mustard','mayo','mayonnaise','ranch','tahini',
+  // Oils & fats
+  'oil','butter','lard','shortening','ghee','margarine','cooking spray',
+  // Alcohol
+  'wine','beer','vodka','rum','bourbon','whiskey','brandy','liqueur',
+  // Sweets & sweeteners (non-fruit)
+  'sugar','honey','maple syrup','agave','molasses','corn syrup',
+  'chocolate','cocoa','vanilla','brown sugar','powdered sugar',
+  // Processed/packaged non-WIC
+  'broth','stock','bouillon','cream of','condensed','evaporated',
+  'coconut milk','coconut cream','heavy cream','heavy whipping cream',
+  'whipping cream','half and half','cream cheese','brie','feta','parmesan',
+  'romano','ricotta','cottage cheese','goat cheese','blue cheese',
+  'grated cheese','shredded parmesan','pecorino',
+  // Meats (not WIC for adults — only canned fish for mom)
+  'chicken','beef','pork','turkey','lamb','shrimp','bacon','sausage',
+  'ground beef','ground turkey','steak','ham','prosciutto','pepperoni',
+  'anchov',
+  // Bread/grain types not WIC-approved
+  'white bread','white rice','white pasta','noodle','ramen','tortilla chip',
+  'cracker','breadcrumb','panko','pita','naan','baguette','croissant',
+  // Nuts & seeds (not WIC — only peanut butter is)
+  'almond','walnut','pecan','cashew','pine nut','sunflower seed',
+  'sesame','chia seed','flax seed','hemp seed','pumpkin seed',
+  // Misc non-WIC
+  'tofu','tempeh','seitan','nutritional yeast','miso',
+  'sour cream',  // not in Maine WIC list
+  'cream','pickle','olive','capers',
+];
+
+// STEP 2: WIC-eligible categories (only checked if no disqualifier matched)
+// Produce: any fresh, frozen (plain), or canned (plain) fruit or vegetable
+const WIC_PRODUCE = [
+  // Vegetables
+  'cauliflower','broccoli','spinach','kale','chard','arugula','lettuce','cabbage',
+  'carrot','potato','sweet potato','yam','tomato','onion','scallion','green onion',
+  'leek','shallot','corn','pea','zucchini','squash','butternut','acorn squash',
+  'mushroom','bell pepper','jalapeño','poblano','celery','cucumber','eggplant',
+  'artichoke','asparagus','beet','turnip','radish','jicama','fennel','bok choy',
+  'brussels sprout','collard','parsnip','rutabaga','kohlrabi','okra','snap pea',
+  'edamame','green bean','wax bean',
+  // Fruits
+  'avocado','apple','banana','lemon','lime','orange','grapefruit','strawberr',
+  'blueberr','raspberr','blackberr','mango','peach','pear','grape','plum',
+  'cherry','watermelon','cantaloupe','honeydew','pineapple','papaya','kiwi',
+  'nectarine','apricot','pomegranate','fig','date','raisin',
+  // Generic
+  'fruit','vegetable','produce',
+];
+
+// Fresh garlic bulb/clove is WIC; garlic powder is not (caught by disqualifier above)
+const WIC_GARLIC = ['garlic clove','garlic bulb','clove of garlic','head of garlic','fresh garlic','garlic'];
+
+// WIC Dairy
+const WIC_DAIRY = ['milk','whole milk','skim milk','1% milk','2% milk','low-fat milk',
+  'nonfat milk','lactose free milk','goat milk','dry milk','powdered milk',
+  'cheese','cheddar','colby','monterey jack','mozzarella','muenster','provolone',
+  'swiss cheese','american cheese','string cheese',
+  'yogurt','greek yogurt',
+  'egg','eggs',
+];
+
+// WIC Whole Grains
+const WIC_GRAINS = [
+  'brown rice','whole wheat pasta','whole grain pasta','whole wheat bread',
+  'whole grain bread','oatmeal','oats','rolled oats','steel cut oat',
+  'corn tortilla','whole wheat tortilla','whole grain tortilla','tortilla',
+];
+
+// WIC Proteins
+const WIC_PROTEIN = [
+  'peanut butter',
+  'black bean','kidney bean','pinto bean','navy bean','cannellini bean',
+  'white bean','garbanzo bean','chickpea','great northern bean',
+  'lentil','split pea','dry pea','dried bean','canned bean',
+  'tuna','canned tuna','salmon','canned salmon','sardine','mackerel',
+];
+
+// WIC 100% Juice (specific brands/types — we flag the ingredient if it looks like plain juice)
+const WIC_JUICE = ['100% juice','apple juice','grape juice','orange juice','tomato juice',
+  'vegetable juice','grapefruit juice','pineapple juice','juice'];
+
+let allRecipes = [];
+let currentFilter = 'all';
+
+function isWicEligible(ingredient) {
+  const lower = ingredient.toLowerCase().trim();
+
+  // Step 1: bail out immediately if any disqualifier word is present
+  for (const d of WIC_DISQUALIFIERS) {
+    if (lower.includes(d)) return false;
+  }
+
+  // Step 2: check each WIC category
+  // Garlic: only fresh forms (powder already disqualified above)
+  for (const g of WIC_GARLIC) {
+    if (lower.includes(g)) return true;
+  }
+  // Produce
+  for (const p of WIC_PRODUCE) {
+    if (lower.includes(p)) return true;
+  }
+  // Dairy
+  for (const d of WIC_DAIRY) {
+    if (lower.includes(d)) return true;
+  }
+  // Grains
+  for (const g of WIC_GRAINS) {
+    if (lower.includes(g)) return true;
+  }
+  // Protein
+  for (const p of WIC_PROTEIN) {
+    if (lower.includes(p)) return true;
+  }
+  // Juice
+  for (const j of WIC_JUICE) {
+    if (lower.includes(j)) return true;
+  }
+
+  return false;
+}
+
+function calcWicScore(ingredients) {
+  if (!ingredients.length) return 0;
+  const eligible = ingredients.filter(i => isWicEligible(i)).length;
+  return Math.round((eligible / ingredients.length) * 100);
+}
+
+function parseRecipeHTML(html, filename) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+
+  const name = doc.querySelector('[itemprop="name"]')?.textContent?.trim()
+    || filename.replace('.html','').replace(/_/g,' ');
+
+  const cookTime = doc.querySelector('.metadata')?.innerHTML?.match(/Cook Time.*?<\/b>(.*?)(?:<b>|$)/i)?.[1]?.trim() || '';
+  const servings = doc.querySelector('[itemprop=""]')?.textContent?.trim()
+    || doc.querySelector('.metadata')?.textContent?.match(/Servings.*?:(.*?)(?:Cook|Source|$)/i)?.[1]?.trim() || '';
+
+  const sourceEl = doc.querySelector('[itemprop="url"]');
+  const sourceUrl = sourceEl?.getAttribute('href') || '';
+  const sourceLabel = doc.querySelector('[itemprop="author"]')?.textContent?.trim() || '';
+
+  const stars = doc.querySelector('.rating')?.textContent?.replace(/[^★]/g,'').length || 0;
+
+  const ingredientEls = doc.querySelectorAll('[itemprop="recipeIngredient"]');
+  const ingredients = Array.from(ingredientEls)
+    .map(el => el.textContent.trim())
+    .filter(t => {
+      if (!t.length) return false;
+      // Skip section headers: any line ending with ":" and containing no digits
+      // e.g. "Buffalo Cauliflower Tacos:", "Avocado Crema:", "For the sauce:"
+      if (t.endsWith(':') && !/\d/.test(t)) return false;
+      return true;
+    });
+
+  const directionEls = doc.querySelectorAll('[itemprop="recipeInstructions"] .line, .directions .line');
+  const directions = Array.from(directionEls).map(el => el.textContent.trim()).filter(t => t);
+
+  const wicScore = calcWicScore(ingredients);
+
+  return { name, cookTime, servings, sourceUrl, sourceLabel, stars, ingredients, directions, wicScore };
+}
+
+function handleFiles(files) {
+  const fileArray = Array.from(files).filter(f => f.name.endsWith('.html'));
+  if (!fileArray.length) return;
+
+  let loaded = 0;
+  allRecipes = [];
+
+  fileArray.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const recipe = parseRecipeHTML(e.target.result, file.name);
+      allRecipes.push(recipe);
+      loaded++;
+      if (loaded === fileArray.length) {
+        allRecipes.sort((a,b) => a.name.localeCompare(b.name));
+        renderLibrary();
+      }
+    };
+    reader.readAsText(file);
+  });
+}
+
+// Drag and drop
+const uploadZone = document.getElementById('upload-zone');
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  handleFiles(e.dataTransfer.files);
+});
+
+function renderLibrary() {
+  document.getElementById('upload-zone').style.display = 'none';
+  document.getElementById('stats-section').style.display = 'block';
+
+  const total = allRecipes.length;
+  const highWic = allRecipes.filter(r => r.wicScore >= 50).length;
+  const avgWic = total ? Math.round(allRecipes.reduce((s,r) => s + r.wicScore, 0) / total) : 0;
+  const sources = new Set(allRecipes.map(r => r.sourceLabel).filter(Boolean)).size;
+
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-wic-high').textContent = highWic;
+  document.getElementById('stat-avg-wic').textContent = avgWic + '%';
+  document.getElementById('stat-sources').textContent = sources;
+  document.getElementById('library-sub').textContent = `${total} recipes imported • ${highWic} with high WIC coverage`;
+
+  filterRecipes();
+}
+
+function setFilter(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  filterRecipes();
+}
+
+function filterRecipes() {
+  const query = document.getElementById('search-input').value.toLowerCase();
+  let filtered = allRecipes;
+
+  if (currentFilter === 'high-wic') filtered = filtered.filter(r => r.wicScore >= 50);
+  if (currentFilter === 'lunch') filtered = filtered.filter(r =>
+    r.name.toLowerCase().includes('soup') || r.name.toLowerCase().includes('salad') ||
+    r.name.toLowerCase().includes('sandwich') || r.name.toLowerCase().includes('wrap') ||
+    r.name.toLowerCase().includes('bowl') || r.name.toLowerCase().includes('taco'));
+  if (currentFilter === 'dinner') filtered = filtered.filter(r =>
+    r.ingredients.length >= 6);
+
+  if (query) {
+    filtered = filtered.filter(r =>
+      r.name.toLowerCase().includes(query) ||
+      r.ingredients.some(i => i.toLowerCase().includes(query))
+    );
+  }
+
+  renderGrid(filtered);
+}
+
+function renderGrid(recipes) {
+  const grid = document.getElementById('recipe-grid');
+  if (!recipes.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:var(--text-muted); padding:3rem; font-size:14px;">No recipes match your search.</div>`;
+    return;
+  }
+
+  grid.innerHTML = recipes.map((r, i) => {
+    const stars = '★'.repeat(r.stars) + '☆'.repeat(5 - r.stars);
+    const wicIngs = r.ingredients.filter(i => isWicEligible(i));
+    const buyIngs = r.ingredients.filter(i => !isWicEligible(i));
+    const topWic = wicIngs.slice(0,3).map(i => `<span class="tag tag-wic">${shortIng(i)}</span>`).join('');
+    const topBuy = buyIngs.slice(0,2).map(i => `<span class="tag tag-buy">${shortIng(i)}</span>`).join('');
+
+    return `<div class="recipe-card" onclick="openRecipe(${allRecipes.indexOf(r)})">
+      <div class="recipe-card-body">
+        <div class="recipe-name">${r.name}</div>
+        <div class="recipe-meta">
+          ${r.cookTime ? `<span>⏱ ${r.cookTime}</span>` : ''}
+          ${r.servings ? `<span>👥 ${r.servings}</span>` : ''}
+          ${r.stars ? `<span class="rating-stars">${stars}</span>` : ''}
+        </div>
+        <div class="ingredient-tags">${topWic}${topBuy}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;">
+          ${r.notes ? `<span class="card-notes-badge">📝 Has notes</span>` : ''}
+          ${r.notes && /tofu|veggie|vegetarian|plant.based|meat.free|meatless|substitute|swap/i.test(r.notes) ? `<span class="card-veg-badge">🌱 Veg adapted</span>` : ''}
+        </div>
+        <div class="wic-score">
+          <span class="wic-label">WIC</span>
+          <div class="wic-bar-wrap"><div class="wic-bar" style="width:${r.wicScore}%"></div></div>
+          <span class="wic-pct">${r.wicScore}%</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function shortIng(str) {
+  // Trim quantity/unit prefix, keep the ingredient name, max 20 chars
+  const cleaned = str.replace(/^[\d\/\s¼½¾⅓⅔⅛]+\s*(cup|cups|tbsp|tsp|oz|lb|g|kg|ml|l|tablespoon|teaspoon|pound|ounce|clove|cloves|head|can|bunch|package|pkg|slice|slices|whole|large|small|medium|big)s?\s*/i, '').trim();
+  return cleaned.length > 22 ? cleaned.slice(0, 20) + '…' : cleaned;
+}
+
+let currentRecipeIndex = -1;
+let editMode = false;
+// Per-recipe WIC overrides: { recipeIndex: { ingredientText: true/false } }
+let wicOverrides = {};
+
+function isWicEligibleWithOverride(ingredient, recipeIndex) {
+  const overrides = wicOverrides[recipeIndex] || {};
+  if (ingredient in overrides) return overrides[ingredient];
+  return isWicEligible(ingredient);
+}
+
+function openRecipe(index) {
+  currentRecipeIndex = index;
+  editMode = false;
+  renderModal();
+  document.getElementById('modal-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function renderModal() {
+  const r = allRecipes[currentRecipeIndex];
+  const idx = currentRecipeIndex;
+
+  // Header
+  document.getElementById('modal-title').textContent = r.name;
+  document.getElementById('modal-title').style.display = editMode ? 'none' : '';
+  const nameInput = document.getElementById('modal-name-input');
+  nameInput.value = r.name;
+  nameInput.style.display = editMode ? '' : 'none';
+  document.getElementById('edit-toggle-btn').textContent = editMode ? '👁 View' : '✏️ Edit';
+  document.getElementById('modal-footer').style.display = editMode ? 'flex' : 'none';
+
+  // Meta bar
+  let meta = '';
+  if (r.cookTime) meta += `<span>⏱ ${r.cookTime}</span>`;
+  if (r.servings) meta += `<span>👥 ${r.servings}</span>`;
+  if (r.stars) meta += `<span class="rating-stars">${'★'.repeat(r.stars)}</span>`;
+  if (r.sourceLabel && r.sourceUrl) meta += `<span><a class="source-link" href="${r.sourceUrl}" target="_blank">🔗 ${r.sourceLabel}</a></span>`;
+  document.getElementById('modal-meta').innerHTML = meta;
+
+  // WIC summary
+  const wicCount = r.ingredients.filter(i => isWicEligibleWithOverride(i, idx)).length;
+  const pct = r.ingredients.length ? Math.round(wicCount / r.ingredients.length * 100) : 0;
+  document.getElementById('modal-wic-summary').innerHTML =
+    `<span class="wic-summary-icon">🌿</span>
+     <div class="wic-summary-text"><strong>${wicCount} of ${r.ingredients.length} ingredients</strong> are WIC-eligible for your household (${pct}% coverage)</div>`;
+
+  // Ingredients
+  const ingList = document.getElementById('modal-ingredients');
+  if (editMode) {
+    ingList.innerHTML = `<p class="edit-hint">Click WIC/Buy badge to override. Edit text to fix names. ✕ to remove.</p>`
+      + r.ingredients.map((ing, i) => {
+        const wic = isWicEligibleWithOverride(ing, idx);
+        return `<li class="edit-ing-row" id="ing-row-${i}">
+          <input class="edit-ing-input" id="ing-input-${i}" value="${escHtml(ing)}">
+          <button class="edit-wic-toggle ${wic ? 'is-wic' : 'not-wic'}" id="ing-wic-${i}"
+            onclick="toggleIngWic(${i})">${wic ? '✅ WIC' : '🛍 Buy'}</button>
+          <button class="edit-delete-btn" onclick="deleteIng(${i})" title="Remove ingredient">✕</button>
+        </li>`;
+      }).join('')
+      + `<div class="edit-add-row">
+          <input class="edit-add-input" id="new-ing-input" placeholder="+ Add an ingredient…" onkeydown="if(event.key==='Enter') addNewIng()">
+          <button class="btn-edit" onclick="addNewIng()">Add</button>
+        </div>`;
+  } else {
+    ingList.innerHTML = r.ingredients.map(ing => {
+      const wic = isWicEligibleWithOverride(ing, idx);
+      return `<li><span class="ing-dot ${wic ? 'wic' : 'buy'}"></span>${escHtml(ing)}</li>`;
+    }).join('');
+  }
+
+  // Directions — view or edit
+  const directionsView = document.getElementById('modal-directions');
+  const directionsEdit = document.getElementById('modal-directions-edit');
+  if (editMode) {
+    directionsView.style.display = 'none';
+    directionsEdit.style.display = '';
+    directionsEdit.value = r.directions.join('\n\n');
+  } else {
+    directionsEdit.style.display = 'none';
+    directionsView.style.display = '';
+    directionsView.innerHTML = r.directions.length
+      ? r.directions.map(d => `<p>${escHtml(d)}</p>`).join('')
+      : '<p style="color:var(--text-muted);font-style:italic;font-size:13px;">No directions available.</p>';
+  }
+
+  // Notes — view or edit
+  const notesView = document.getElementById('notes-view');
+  const notesEdit = document.getElementById('notes-edit');
+  const notes = r.notes || '';
+  if (editMode) {
+    notesView.style.display = 'none';
+    notesEdit.style.display = '';
+    notesEdit.value = notes;
+  } else {
+    notesEdit.style.display = 'none';
+    notesView.style.display = '';
+    if (notes) {
+      notesView.className = 'notes-view';
+      notesView.textContent = notes;
+    } else {
+      notesView.className = 'notes-view empty';
+      notesView.textContent = 'No notes yet. Click ✏️ Edit to add your thoughts, swaps, or adaptations.';
+    }
+  }
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function toggleEditMode() {
+  editMode = !editMode;
+  renderModal();
+}
+
+function toggleIngWic(i) {
+  const r = allRecipes[currentRecipeIndex];
+  const ing = document.getElementById(`ing-input-${i}`).value;
+  const overrides = wicOverrides[currentRecipeIndex] || {};
+  const currentWic = isWicEligibleWithOverride(r.ingredients[i], currentRecipeIndex);
+  overrides[r.ingredients[i]] = !currentWic;
+  wicOverrides[currentRecipeIndex] = overrides;
+  const btn = document.getElementById(`ing-wic-${i}`);
+  btn.className = `edit-wic-toggle ${!currentWic ? 'is-wic' : 'not-wic'}`;
+  btn.textContent = !currentWic ? '✅ WIC' : '🛍 Buy';
+  // Update WIC summary
+  const wicCount = r.ingredients.filter(ig => isWicEligibleWithOverride(ig, currentRecipeIndex)).length;
+  const pct = r.ingredients.length ? Math.round(wicCount / r.ingredients.length * 100) : 0;
+  document.getElementById('modal-wic-summary').innerHTML =
+    `<span class="wic-summary-icon">🌿</span>
+     <div class="wic-summary-text"><strong>${wicCount} of ${r.ingredients.length} ingredients</strong> are WIC-eligible for your household (${pct}% coverage)</div>`;
+}
+
+function deleteIng(i) {
+  allRecipes[currentRecipeIndex].ingredients.splice(i, 1);
+  recalcWicScore(currentRecipeIndex);
+  renderModal();
+}
+
+function addNewIng() {
+  const input = document.getElementById('new-ing-input');
+  const val = input.value.trim();
+  if (!val) return;
+  allRecipes[currentRecipeIndex].ingredients.push(val);
+  input.value = '';
+  recalcWicScore(currentRecipeIndex);
+  renderModal();
+}
+
+function saveEdit() {
+  const r = allRecipes[currentRecipeIndex];
+  // Save name
+  const newName = document.getElementById('modal-name-input').value.trim();
+  if (newName) r.name = newName;
+  // Save ingredient text edits
+  r.ingredients = r.ingredients.map((ing, i) => {
+    const input = document.getElementById(`ing-input-${i}`);
+    return input ? input.value.trim() || ing : ing;
+  }).filter(Boolean);
+  // Save directions
+  const directionsRaw = document.getElementById('modal-directions-edit').value.trim();
+  r.directions = directionsRaw ? directionsRaw.split(/\n{2,}/).map(s => s.trim()).filter(Boolean) : r.directions;
+  // Save notes
+  r.notes = document.getElementById('notes-edit').value.trim();
+  recalcWicScore(currentRecipeIndex);
+  editMode = false;
+  renderModal();
+  filterRecipes();
+}
+
+function cancelEdit() {
+  editMode = false;
+  renderModal();
+}
+
+function recalcWicScore(index) {
+  const r = allRecipes[index];
+  const wicCount = r.ingredients.filter(i => isWicEligibleWithOverride(i, index)).length;
+  r.wicScore = r.ingredients.length ? Math.round(wicCount / r.ingredients.length * 100) : 0;
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModalDirect();
+}
+function closeModalDirect() {
+  editMode = false;
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModalDirect(); });
+
+// ══ MEAL PLANNER ══
+const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const MEALS = ['Lunch','Dinner'];
+
+// weekPlan[dayIndex][mealIndex] = recipeIndex or null
+let weekPlan = Array.from({length:7}, () => [null, null]);
+let anchorIndices = [];
+let pickerTarget = null; // {day, meal}
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  document.querySelectorAll('nav button').forEach((b, i) => {
+    b.classList.toggle('active', ['recipes','benefits','planner','shopping'][i] === id);
+  });
+  if (id === 'planner') initPlanner();
+  if (id === 'shopping') renderShopping();
+}
+
+function initPlanner() {
+  if (!allRecipes.length) {
+    document.getElementById('planner-no-recipes').style.display = '';
+    document.getElementById('planner-content').style.display = 'none';
+    return;
+  }
+  document.getElementById('planner-no-recipes').style.display = 'none';
+  document.getElementById('planner-content').style.display = '';
+  renderAnchorChips();
+  renderWeekGrid();
+  renderSuggestions();
+}
+
+// ── Anchor recipes ──
+function renderAnchorSearch() {
+  const q = document.getElementById('anchor-search').value.toLowerCase().trim();
+  const results = document.getElementById('anchor-search-results');
+  if (!q) { results.innerHTML = ''; return; }
+  const matches = allRecipes
+    .map((r,i) => ({r,i}))
+    .filter(({r}) => r.name.toLowerCase().includes(q))
+    .slice(0, 8);
+  if (!matches.length) { results.innerHTML = '<div style="padding:8px 12px;font-size:13px;color:var(--text-muted);">No recipes found</div>'; return; }
+  results.innerHTML = matches.map(({r,i}) => {
+    const added = anchorIndices.includes(i);
+    return `<div class="anchor-result-row ${added ? 'already-added' : ''}" onclick="addAnchor(${i})">
+      <span class="anchor-result-name">${r.name}</span>
+      <span class="anchor-result-wic">WIC ${r.wicScore}%</span>
+    </div>`;
+  }).join('');
+}
+
+function addAnchor(index) {
+  if (anchorIndices.includes(index) || anchorIndices.length >= 3) return;
+  anchorIndices.push(index);
+  // Auto-place in first empty slot
+  for (let m = 0; m < 2; m++) {
+    for (let d = 0; d < 7; d++) {
+      if (weekPlan[d][m] === null) {
+        weekPlan[d][m] = index;
+        break;
+      }
+    }
+    break;
+  }
+  document.getElementById('anchor-search').value = '';
+  document.getElementById('anchor-search-results').innerHTML = '';
+  renderAnchorChips();
+  renderWeekGrid();
+  renderSuggestions();
+}
+
+function removeAnchor(index) {
+  anchorIndices = anchorIndices.filter(i => i !== index);
+  renderAnchorChips();
+  renderSuggestions();
+}
+
+function renderAnchorChips() {
+  document.getElementById('anchor-chips').innerHTML = anchorIndices.map(i =>
+    `<div class="anchor-chip">
+      ${allRecipes[i].name}
+      <button onclick="removeAnchor(${i})">✕</button>
+    </div>`
+  ).join('') || '<span style="font-size:13px;color:var(--text-muted);font-style:italic;">No anchors yet — search above</span>';
+}
+
+// ── Suggestions ──
+function getIngredientSet(recipeIndex) {
+  return new Set(
+    allRecipes[recipeIndex].ingredients.map(i =>
+      i.toLowerCase().replace(/^[\d\/\s¼½¾⅓⅔⅛]+\s*(cup|cups|tbsp|tsp|oz|lb|tablespoon|teaspoon|pound|ounce|clove|cloves|head|can|bunch|package|pkg|slice|slices|whole|large|small|medium|big)s?\s*/i,'').trim()
+    ).filter(s => s.length > 2)
+  );
+}
+
+function scoreOverlap(candidateIndex, anchorSets) {
+  const candidateIngs = getIngredientSet(candidateIndex);
+  let total = 0;
+  anchorSets.forEach(aSet => {
+    aSet.forEach(ing => { if (candidateIngs.has(ing)) total++; });
+  });
+  return total;
+}
+
+function renderSuggestions() {
+  const section = document.getElementById('suggestions-section');
+  if (!anchorIndices.length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+  const anchorSets = anchorIndices.map(i => getIngredientSet(i));
+  const placedIndices = new Set(weekPlan.flat().filter(x => x !== null));
+  const suggestions = allRecipes
+    .map((r, i) => ({ i, r, overlap: scoreOverlap(i, anchorSets) }))
+    .filter(({i}) => !anchorIndices.includes(i))
+    .sort((a,b) => b.overlap - a.overlap || b.r.wicScore - a.r.wicScore)
+    .slice(0, 12);
+
+  document.getElementById('suggestion-cards').innerHTML = suggestions.map(({i, r, overlap}) => {
+    const added = placedIndices.has(i);
+    return `<div class="suggestion-card ${added ? 'added' : ''}" onclick="addSuggestionToWeek(${i})">
+      <div class="suggestion-name">${r.name}</div>
+      <div class="suggestion-overlap">🔗 ${overlap} shared ingredient${overlap !== 1 ? 's' : ''}</div>
+      <div class="suggestion-wic">WIC ${r.wicScore}%</div>
+      ${!added ? `<button class="suggestion-add-btn" onclick="event.stopPropagation();addSuggestionToWeek(${i})">+ Add to week</button>` : '<div style="font-size:11px;color:var(--sage);margin-top:6px;">✓ In your week</div>'}
+    </div>`;
+  }).join('');
+}
+
+function addSuggestionToWeek(index) {
+  // Find first empty slot
+  for (let m = 0; m < 2; m++) {
+    for (let d = 0; d < 7; d++) {
+      if (weekPlan[d][m] === null) {
+        weekPlan[d][m] = index;
+        renderWeekGrid();
+        renderSuggestions();
+        return;
+      }
+    }
+  }
+  alert('Your week is full! Clear a slot first.');
+}
+
+// ── Week grid ──
+function renderWeekGrid() {
+  const grid = document.getElementById('week-grid');
+  let html = '<div class="week-header"></div>';
+  DAYS.forEach(d => html += `<div class="week-header">${d}</div>`);
+
+  MEALS.forEach((meal, m) => {
+    html += `<div class="week-row-label">${meal}</div>`;
+    DAYS.forEach((_, d) => {
+      const ri = weekPlan[d][m];
+      const isAnchor = ri !== null && anchorIndices.includes(ri);
+      if (ri !== null) {
+        const r = allRecipes[ri];
+        html += `<div class="week-cell filled ${isAnchor ? 'week-cell-anchor' : ''}">
+          <button class="week-cell-clear" onclick="clearCell(${d},${m})">✕</button>
+          ${isAnchor ? '<span class="anchor-dot"></span>' : ''}
+          <div class="week-cell-name">${r.name}</div>
+          <div class="week-cell-wic">WIC ${r.wicScore}%</div>
+        </div>`;
+      } else {
+        html += `<div class="week-cell" onclick="openPickerModal(${d},${m})">
+          <span class="week-cell-empty-hint">+ Add</span>
+        </div>`;
+      }
+    });
+  });
+  grid.innerHTML = html;
+}
+
+function clearCell(d, m) {
+  weekPlan[d][m] = null;
+  renderWeekGrid();
+  renderSuggestions();
+}
+
+function clearWeek() {
+  weekPlan = Array.from({length:7}, () => [null, null]);
+  anchorIndices = [];
+  renderAnchorChips();
+  renderWeekGrid();
+  renderSuggestions();
+  document.getElementById('suggestions-section').style.display = 'none';
+}
+
+// ── Recipe picker modal ──
+function openPickerModal(d, m) {
+  pickerTarget = {d, m};
+  document.getElementById('picker-title').textContent = `${MEALS[m]} — ${DAYS[d]}`;
+  document.getElementById('picker-search').value = '';
+  renderPickerList();
+  document.getElementById('picker-overlay').classList.add('open');
+}
+
+function closePickerModal() {
+  document.getElementById('picker-overlay').classList.remove('open');
+  pickerTarget = null;
+}
+
+function renderPickerList() {
+  const q = document.getElementById('picker-search').value.toLowerCase();
+  const matches = allRecipes
+    .map((r,i) => ({r,i}))
+    .filter(({r}) => !q || r.name.toLowerCase().includes(q))
+    .slice(0, 40);
+  document.getElementById('picker-list').innerHTML = matches.map(({r,i}) =>
+    `<div class="picker-row" onclick="pickRecipe(${i})">
+      <span class="picker-row-name">${r.name}</span>
+      <span class="picker-row-wic">WIC ${r.wicScore}%</span>
+    </div>`
+  ).join('');
+}
+
+function pickRecipe(index) {
+  if (!pickerTarget) return;
+  weekPlan[pickerTarget.d][pickerTarget.m] = index;
+  closePickerModal();
+  renderWeekGrid();
+  renderSuggestions();
+}
+
+// ── Shopping list ──
+function goToShopping() {
+  showPage('shopping');
+}
+
+function renderShopping() {
+  const allPlaced = weekPlan.flat().filter(x => x !== null);
+  if (!allPlaced.length) {
+    document.getElementById('shopping-empty').style.display = '';
+    document.getElementById('shopping-content').style.display = 'none';
+    return;
+  }
+  document.getElementById('shopping-empty').style.display = 'none';
+  document.getElementById('shopping-content').style.display = '';
+
+  // Collect all ingredients from planned recipes
+  const wicItems = {};
+  const buyItems = {};
+
+  allPlaced.forEach(ri => {
+    const r = allRecipes[ri];
+    r.ingredients.forEach(ing => {
+      const key = ing.toLowerCase().trim();
+      const isWic = isWicEligibleWithOverride(ing, ri);
+      const target = isWic ? wicItems : buyItems;
+      if (!target[key]) target[key] = { text: ing, count: 0, recipes: [] };
+      target[key].count++;
+      if (!target[key].recipes.includes(r.name)) target[key].recipes.push(r.name);
+    });
+  });
+
+  // Summary stats
+  const uniqueRecipes = new Set(allPlaced).size;
+  const totalMeals = allPlaced.length;
+  const wicCount = Object.keys(wicItems).length;
+  const buyCount = Object.keys(buyItems).length;
+  document.getElementById('shopping-summary').innerHTML = `
+    <div class="stat-card"><span class="stat-num">${totalMeals}</span><span class="stat-label">Meals Planned</span></div>
+    <div class="stat-card"><span class="stat-num">${uniqueRecipes}</span><span class="stat-label">Recipes</span></div>
+    <div class="stat-card" style="border-color:#C5DCC6;"><span class="stat-num" style="color:#2D5E30;">${wicCount}</span><span class="stat-label">WIC Items</span></div>
+    <div class="stat-card" style="border-color:#F2D5AA;"><span class="stat-num" style="color:#7A4E1A;">${buyCount}</span><span class="stat-label">Items to Buy</span></div>`;
+
+  document.getElementById('shopping-sub').textContent = `${totalMeals} meals • ${wicCount + buyCount} ingredients`;
+
+  const makeList = (items, id) => Object.values(items)
+    .sort((a,b) => a.text.localeCompare(b.text))
+    .map((item, idx) => {
+      const cbId = `${id}-${idx}`;
+      return `<div class="shopping-item">
+        <input type="checkbox" id="${cbId}" onchange="toggleCheck(this)">
+        <div style="flex:1;">
+          <label for="${cbId}">${item.text}</label>
+          ${item.count > 1 ? `<div class="shopping-qty">Used in ${item.count} recipes</div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+
+  document.getElementById('shopping-columns').innerHTML = `
+    <div class="shopping-col">
+      <div class="shopping-col-header wic-col">✅ WIC-Eligible <span style="font-size:12px;font-weight:400;margin-left:4px;">(${wicCount} items)</span></div>
+      ${makeList(wicItems, 'wic') || '<div style="padding:1rem 1.25rem;font-size:13px;color:var(--text-muted);font-style:italic;">No WIC items this week</div>'}
+    </div>
+    <div class="shopping-col">
+      <div class="shopping-col-header buy-col">🛍 Buy Yourself <span style="font-size:12px;font-weight:400;margin-left:4px;">(${buyCount} items)</span></div>
+      ${makeList(buyItems, 'buy') || '<div style="padding:1rem 1.25rem;font-size:13px;color:var(--text-muted);font-style:italic;">No extra items this week</div>'}
+    </div>`;
+}
+
+function toggleCheck(cb) {
+  cb.nextElementSibling.querySelector('label').classList.toggle('checked', cb.checked);
+}
+
+function copyShoppingList() {
+  const allPlaced = weekPlan.flat().filter(x => x !== null);
+  if (!allPlaced.length) return;
+  const wicLines = [], buyLines = [];
+  const seen = new Set();
+  allPlaced.forEach(ri => {
+    allRecipes[ri].ingredients.forEach(ing => {
+      const key = ing.toLowerCase().trim();
+      if (seen.has(key)) return;
+      seen.add(key);
+      (isWicEligibleWithOverride(ing, ri) ? wicLines : buyLines).push(ing);
+    });
+  });
+  const text = `WIC-ELIGIBLE ITEMS:\n${wicLines.sort().map(i => '☐ ' + i).join('\n')}\n\nBUY YOURSELF:\n${buyLines.sort().map(i => '☐ ' + i).join('\n')}`;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    btn.textContent = '✓ Copied!';
+    setTimeout(() => btn.textContent = '📋 Copy List', 2000);
+  });
+}
+
+// ══ URL IMPORT ══
+
+function openUrlImport() {
+  document.getElementById('url-import-overlay').classList.add('open');
+  document.getElementById('url-import-input').value = '';
+  document.getElementById('url-import-status').style.display = 'none';
+  document.getElementById('url-import-preview').style.display = 'none';
+  setTimeout(() => document.getElementById('url-import-input').focus(), 100);
+}
+
+function closeUrlImport() {
+  document.getElementById('url-import-overlay').classList.remove('open');
+}
+
+function setImportUrl(url) {
+  document.getElementById('url-import-input').value = url;
+  document.getElementById('url-import-input').focus();
+}
+
+function setImportStatus(type, message) {
+  const el = document.getElementById('url-import-status');
+  el.style.display = '';
+  if (type === 'loading') {
+    el.innerHTML = `<div class="import-status-box loading"><span class="spinner"></span>${message}</div>`;
+  } else if (type === 'error') {
+    el.innerHTML = `<div class="import-status-box error">⚠️ ${message}</div>`;
+  } else if (type === 'success') {
+    el.innerHTML = `<div class="import-status-box success">✅ ${message}</div>`;
+  }
+}
+
+async function startUrlImport() {
+  const url = document.getElementById('url-import-input').value.trim();
+  if (!url) return;
+  if (!url.startsWith('http')) {
+    setImportStatus('error', 'Please enter a full URL starting with https://');
+    return;
+  }
+
+  document.getElementById('url-import-preview').style.display = 'none';
+  setImportStatus('loading', 'Fetching recipe…');
+  document.getElementById('url-import-btn').disabled = true;
+
+  try {
+    const html = await fetchWithFallback(url);
+    const recipe = extractRecipeFromHtml(html, url);
+    if (!recipe) throw new Error('No recipe found on that page. Make sure you\'re linking directly to a recipe page, not a category or homepage.');
+    showImportPreview(recipe, url);
+  } catch (err) {
+    setImportStatus('error', err.message || 'Something went wrong. Try again in a moment.');
+  } finally {
+    document.getElementById('url-import-btn').disabled = false;
+  }
+}
+
+// Try multiple CORS proxies in sequence until one works
+async function fetchWithFallback(url) {
+  const encoded = encodeURIComponent(url);
+
+  const proxies = [
+    {
+      name: 'allorigins',
+      fetch: async () => {
+        const r = await fetch(`https://api.allorigins.win/get?url=${encoded}`, {signal: AbortSignal.timeout(8000)});
+        if (!r.ok) throw new Error('allorigins failed');
+        const d = await r.json();
+        if (!d.contents) throw new Error('allorigins empty');
+        return d.contents;
+      }
+    },
+    {
+      name: 'corsproxy.io',
+      fetch: async () => {
+        const r = await fetch(`https://corsproxy.io/?${encoded}`, {signal: AbortSignal.timeout(8000)});
+        if (!r.ok) throw new Error('corsproxy failed');
+        return await r.text();
+      }
+    },
+    {
+      name: 'htmldragon',
+      fetch: async () => {
+        const r = await fetch(`https://thingproxy.freeboard.io/fetch/${url}`, {signal: AbortSignal.timeout(8000)});
+        if (!r.ok) throw new Error('thingproxy failed');
+        return await r.text();
+      }
+    },
+  ];
+
+  let lastError = null;
+  for (let i = 0; i < proxies.length; i++) {
+    const proxy = proxies[i];
+    try {
+      setImportStatus('loading', i === 0 ? 'Fetching recipe…' : `Retrying with backup server ${i}…`);
+      const html = await proxy.fetch();
+      if (html && html.length > 500) return html;
+      throw new Error('Response too short');
+    } catch (e) {
+      lastError = e;
+      // continue to next proxy
+    }
+  }
+
+  throw new Error('All fetch attempts failed. Check your internet connection and try again — or try a different recipe URL.');
+}
+
+function extractRecipeFromHtml(html, sourceUrl) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+
+  // ── Method 1: JSON-LD schema (best, used by most food blogs) ──
+  const scripts = doc.querySelectorAll('script[type="application/ld+json"]');
+  for (const script of scripts) {
+    try {
+      const json = JSON.parse(script.textContent);
+      // Could be a single object or an array or wrapped in @graph
+      const candidates = [];
+      if (Array.isArray(json)) candidates.push(...json);
+      else if (json['@graph']) candidates.push(...json['@graph']);
+      else candidates.push(json);
+
+      for (const item of candidates) {
+        if (item['@type'] === 'Recipe' || (Array.isArray(item['@type']) && item['@type'].includes('Recipe'))) {
+          return parseJsonLdRecipe(item, sourceUrl);
+        }
+      }
+    } catch(e) { /* malformed JSON, skip */ }
+  }
+
+  // ── Method 2: Microdata (older sites) ──
+  const microdata = doc.querySelector('[itemtype*="schema.org/Recipe"]');
+  if (microdata) {
+    return parseMicrodataRecipe(microdata, sourceUrl);
+  }
+
+  return null;
+}
+
+function parseJsonLdRecipe(item, sourceUrl) {
+  const name = item.name || '';
+  if (!name) return null;
+
+  // Ingredients
+  let ingredients = [];
+  if (Array.isArray(item.recipeIngredient)) {
+    ingredients = item.recipeIngredient.map(i => String(i).trim()).filter(i => i && !i.endsWith(':'));
+  }
+
+  // Directions
+  let directions = [];
+  if (Array.isArray(item.recipeInstructions)) {
+    item.recipeInstructions.forEach(step => {
+      if (typeof step === 'string') directions.push(step.trim());
+      else if (step.text) directions.push(String(step.text).trim());
+      else if (step.itemListElement) {
+        step.itemListElement.forEach(s => { if (s.text) directions.push(String(s.text).trim()); });
+      }
+    });
+  } else if (typeof item.recipeInstructions === 'string') {
+    directions = item.recipeInstructions.split(/\n+/).map(s => s.trim()).filter(Boolean);
+  }
+
+  // Cook/prep time — convert ISO 8601 duration (PT45M) to readable
+  const cookTime = parseDuration(item.totalTime || item.cookTime || '');
+  const servings = item.recipeYield
+    ? (Array.isArray(item.recipeYield) ? item.recipeYield[0] : item.recipeYield).toString()
+    : '';
+
+  const sourceLabel = new URL(sourceUrl).hostname.replace('www.','');
+  const wicScore = calcWicScore(ingredients);
+
+  return { name, ingredients, directions, cookTime, servings, sourceUrl, sourceLabel, stars: 0, wicScore, notes: '' };
+}
+
+function parseMicrodataRecipe(el, sourceUrl) {
+  const name = el.querySelector('[itemprop="name"]')?.textContent?.trim() || '';
+  if (!name) return null;
+
+  const ingredients = Array.from(el.querySelectorAll('[itemprop="recipeIngredient"]'))
+    .map(e => e.textContent.trim())
+    .filter(t => t && !t.endsWith(':'));
+
+  const directions = Array.from(el.querySelectorAll('[itemprop="recipeInstructions"] p, [itemprop="recipeInstructions"] li'))
+    .map(e => e.textContent.trim()).filter(Boolean);
+
+  const cookTime = el.querySelector('[itemprop="totalTime"], [itemprop="cookTime"]')?.textContent?.trim() || '';
+  const servings = el.querySelector('[itemprop="recipeYield"]')?.textContent?.trim() || '';
+  const sourceLabel = new URL(sourceUrl).hostname.replace('www.','');
+  const wicScore = calcWicScore(ingredients);
+
+  return { name, ingredients, directions, cookTime, servings, sourceUrl, sourceLabel, stars: 0, wicScore, notes: '' };
+}
+
+function parseDuration(iso) {
+  if (!iso) return '';
+  // e.g. PT1H30M or PT45M
+  const match = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?/);
+  if (!match) return iso; // return as-is if not ISO format
+  const h = parseInt(match[1] || 0);
+  const m = parseInt(match[2] || 0);
+  if (h && m) return `${h} hr ${m} min`;
+  if (h) return `${h} hr`;
+  if (m) return `${m} min`;
+  return '';
+}
+
+let pendingImportRecipe = null;
+
+function showImportPreview(recipe, url) {
+  pendingImportRecipe = recipe;
+  setImportStatus('success', `Found: "${recipe.name}" — review and confirm below`);
+
+  const wicIngs = recipe.ingredients.filter(i => isWicEligible(i)).length;
+  const preview = document.getElementById('url-import-preview');
+  preview.style.display = '';
+  preview.innerHTML = `
+    <div class="import-preview-box">
+      <div class="import-preview-name">${recipe.name}</div>
+      <div class="import-preview-meta">
+        ${recipe.cookTime ? `<span>⏱ ${recipe.cookTime}</span>` : ''}
+        ${recipe.servings ? `<span>👥 ${recipe.servings}</span>` : ''}
+        <span>📋 ${recipe.ingredients.length} ingredients</span>
+        <span style="color:var(--sage);">🌿 ${recipe.wicScore}% WIC</span>
+        <span style="color:var(--wic-blue-mid);">🔗 ${recipe.sourceLabel}</span>
+      </div>
+      <div class="import-preview-ings">
+        ${recipe.ingredients.map(i => {
+          const wic = isWicEligible(i);
+          return `<span style="display:inline-flex;align-items:center;gap:5px;margin-right:12px;">
+            <span style="width:7px;height:7px;border-radius:50%;background:${wic ? '#1E7E34' : '#B03A2E'};flex-shrink:0;display:inline-block;"></span>${i}
+          </span>`;
+        }).join('')}
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn-secondary" onclick="closeUrlImport()">Cancel</button>
+        <button class="btn-primary" onclick="confirmImport()">✅ Add to Library</button>
+      </div>
+    </div>`;
+}
+
+function confirmImport() {
+  if (!pendingImportRecipe) return;
+  allRecipes.push(pendingImportRecipe);
+  allRecipes.sort((a,b) => a.name.localeCompare(b.name));
+  if (document.getElementById('stats-section').style.display === 'none' && allRecipes.length === 1) {
+    document.getElementById('upload-zone').style.display = 'none';
+    document.getElementById('stats-section').style.display = 'block';
+  }
+  renderLibrary();
+  closeUrlImport();
+  // Flash confirmation
+  const sub = document.getElementById('library-sub');
+  const prev = sub.textContent;
+  sub.textContent = `✅ "${pendingImportRecipe.name}" added to your library!`;
+  sub.style.color = 'var(--sage)';
+  setTimeout(() => { sub.textContent = prev; sub.style.color = ''; }, 3000);
+  pendingImportRecipe = null;
+}
+</script>
+</body>
+</html>
