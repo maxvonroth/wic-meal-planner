@@ -1218,6 +1218,7 @@
     <button onclick="showPage('planner')">📅 Meal Planner</button>
     <button onclick="showPage('shopping')">🧾 Shopping List</button>
   </nav>
+  <div id="sync-status" style="font-size:12px;color:var(--sage);white-space:nowrap;padding-left:1rem;">⏳ Loading…</div>
 </header>
 
 <main>
@@ -1625,7 +1626,161 @@
   </div>
 </div>
 
+<script type="module">
+// ══ FIREBASE SETUP ══
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, collection, doc, setDoc, deleteDoc, getDocs, onSnapshot, getDoc }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBdkZUIgklJ4emkjmHANXNrViKQPq7riro",
+  authDomain: "wic-meal-planner.firebaseapp.com",
+  projectId: "wic-meal-planner",
+  storageBucket: "wic-meal-planner.firebasestorage.app",
+  messagingSenderId: "759030496962",
+  appId: "1:759030496962:web:ac007a1870e22159dc855b"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getFirestore(firebaseApp);
+
+// ── Sync status indicator ──
+function setSyncStatus(state, msg) {
+  const el = document.getElementById('sync-status');
+  if (!el) return;
+  const states = { ok: '🟢', saving: '🟡', error: '🔴', loading: '⏳' };
+  el.textContent = `${states[state] || '⚪'} ${msg}`;
+  el.style.color = state === 'error' ? '#C0392B' : state === 'saving' ? '#C17E3A' : '#5A7A5C';
+}
+
+// ── Save a single recipe to Firestore ──
+async function saveRecipeToFirestore(recipe) {
+  try {
+    setSyncStatus('saving', 'Saving…');
+    const id = recipe.id || slugify(recipe.name);
+    recipe.id = id;
+    await setDoc(doc(db, 'recipes', id), sanitizeForFirestore(recipe));
+    setSyncStatus('ok', 'Saved');
+  } catch(e) {
+    console.error('Save error:', e);
+    setSyncStatus('error', 'Save failed');
+  }
+}
+
+// ── Delete a recipe from Firestore ──
+async function deleteRecipeFromFirestore(id) {
+  try {
+    await deleteDoc(doc(db, 'recipes', id));
+  } catch(e) {
+    console.error('Delete error:', e);
+  }
+}
+
+// ── Save week plan ──
+async function saveWeekPlan() {
+  try {
+    setSyncStatus('saving', 'Saving…');
+    // Store recipe IDs instead of indices for portability
+    const plan = weekPlan.map(day =>
+      day.map(ri => (ri !== null && allRecipes[ri]) ? allRecipes[ri].id : null)
+    );
+    await setDoc(doc(db, 'weekplan', 'current'), { plan, updatedAt: new Date().toISOString() });
+    setSyncStatus('ok', 'Saved');
+  } catch(e) {
+    console.error('Week plan save error:', e);
+    setSyncStatus('error', 'Save failed');
+  }
+}
+
+// ── Load everything from Firestore on startup ──
+async function loadFromFirestore() {
+  setSyncStatus('loading', 'Loading…');
+  try {
+    // Load recipes
+    const snapshot = await getDocs(collection(db, 'recipes'));
+    allRecipes = [];
+    snapshot.forEach(docSnap => {
+      const r = docSnap.data();
+      r.id = docSnap.id;
+      allRecipes.push(r);
+    });
+    allRecipes.sort((a,b) => a.name.localeCompare(b.name));
+
+    // Load week plan
+    const planDoc = await getDoc(doc(db, 'weekplan', 'current'));
+    if (planDoc.exists()) {
+      const savedPlan = planDoc.data().plan;
+      // Convert IDs back to indices
+      weekPlan = savedPlan.map(day =>
+        day.map(id => {
+          if (!id) return null;
+          const idx = allRecipes.findIndex(r => r.id === id);
+          return idx >= 0 ? idx : null;
+        })
+      );
+    }
+
+    setSyncStatus('ok', 'Up to date');
+
+    if (allRecipes.length > 0) {
+      renderLibrary();
+    }
+
+    // Listen for real-time changes (so wife's additions appear instantly)
+    onSnapshot(collection(db, 'recipes'), snapshot => {
+      snapshot.docChanges().forEach(change => {
+        const r = change.doc.data();
+        r.id = change.doc.id;
+        if (change.type === 'added') {
+          if (!allRecipes.find(x => x.id === r.id)) {
+            allRecipes.push(r);
+            allRecipes.sort((a,b) => a.name.localeCompare(b.name));
+          }
+        } else if (change.type === 'modified') {
+          const idx = allRecipes.findIndex(x => x.id === r.id);
+          if (idx >= 0) allRecipes[idx] = r;
+        } else if (change.type === 'removed') {
+          allRecipes = allRecipes.filter(x => x.id !== r.id);
+        }
+      });
+      if (allRecipes.length > 0) renderLibrary();
+      setSyncStatus('ok', 'Up to date');
+    });
+
+  } catch(e) {
+    console.error('Load error:', e);
+    setSyncStatus('error', 'Could not connect to database');
+  }
+}
+
+// ── Helpers ──
+function slugify(name) {
+  return name.toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 60)
+    + '-' + Date.now().toString(36);
+}
+
+function sanitizeForFirestore(obj) {
+  // Firestore doesn't allow undefined values
+  return JSON.parse(JSON.stringify(obj, (k, v) => v === undefined ? null : v));
+}
+
+// Expose Firebase functions to global scope for use by other functions
+window._saveRecipe = saveRecipeToFirestore;
+window._deleteRecipe = deleteRecipeFromFirestore;
+window._saveWeekPlan = saveWeekPlan;
+
+// Start loading when page is ready
+window.addEventListener('load', loadFromFirestore);
+</script>
+
 <script>
+// ── Global state ──
+let allRecipes = [];
+let weekPlan = Array.from({length:7}, () => [null, null]);
+
 // ── WIC Eligibility Engine (based on official Maine WIC food list) ──
 //
 // STEP 1: Disqualifiers — if any of these words/phrases appear, it's NOT WIC-eligible
@@ -1724,7 +1879,6 @@ const WIC_PROTEIN = [
 const WIC_JUICE = ['100% juice','apple juice','grape juice','orange juice','tomato juice',
   'vegetable juice','grapefruit juice','pineapple juice','juice'];
 
-let allRecipes = [];
 let currentFilter = 'all';
 
 function isWicEligible(ingredient) {
@@ -1811,15 +1965,22 @@ function handleFiles(files) {
   if (!fileArray.length) return;
 
   let loaded = 0;
-  allRecipes = [];
+  const newRecipes = [];
 
   fileArray.forEach(file => {
     const reader = new FileReader();
     reader.onload = e => {
       const recipe = parseRecipeHTML(e.target.result, file.name);
-      allRecipes.push(recipe);
+      // Skip duplicates by name
+      if (!allRecipes.find(r => r.name === recipe.name)) {
+        newRecipes.push(recipe);
+      }
       loaded++;
       if (loaded === fileArray.length) {
+        newRecipes.forEach(r => {
+          allRecipes.push(r);
+          if (window._saveRecipe) window._saveRecipe(r);
+        });
         allRecipes.sort((a,b) => a.name.localeCompare(b.name));
         renderLibrary();
       }
@@ -2080,20 +2241,18 @@ function addNewIng() {
 
 function saveEdit() {
   const r = allRecipes[currentRecipeIndex];
-  // Save name
   const newName = document.getElementById('modal-name-input').value.trim();
   if (newName) r.name = newName;
-  // Save ingredient text edits
   r.ingredients = r.ingredients.map((ing, i) => {
     const input = document.getElementById(`ing-input-${i}`);
     return input ? input.value.trim() || ing : ing;
   }).filter(Boolean);
-  // Save directions
   const directionsRaw = document.getElementById('modal-directions-edit').value.trim();
   r.directions = directionsRaw ? directionsRaw.split(/\n{2,}/).map(s => s.trim()).filter(Boolean) : r.directions;
-  // Save notes
   r.notes = document.getElementById('notes-edit').value.trim();
   recalcWicScore(currentRecipeIndex);
+  // Save to Firebase
+  if (window._saveRecipe) window._saveRecipe(r);
   editMode = false;
   renderModal();
   filterRecipes();
@@ -2124,8 +2283,6 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModalDi
 const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const MEALS = ['Lunch','Dinner'];
 
-// weekPlan[dayIndex][mealIndex] = recipeIndex or null
-let weekPlan = Array.from({length:7}, () => [null, null]);
 let anchorIndices = [];
 let pickerTarget = null; // {day, meal}
 
@@ -2248,13 +2405,13 @@ function renderSuggestions() {
 }
 
 function addSuggestionToWeek(index) {
-  // Find first empty slot
   for (let m = 0; m < 2; m++) {
     for (let d = 0; d < 7; d++) {
       if (weekPlan[d][m] === null) {
         weekPlan[d][m] = index;
         renderWeekGrid();
         renderSuggestions();
+        if (window._saveWeekPlan) window._saveWeekPlan();
         return;
       }
     }
@@ -2295,6 +2452,7 @@ function clearCell(d, m) {
   weekPlan[d][m] = null;
   renderWeekGrid();
   renderSuggestions();
+  if (window._saveWeekPlan) window._saveWeekPlan();
 }
 
 function clearWeek() {
@@ -2304,6 +2462,7 @@ function clearWeek() {
   renderWeekGrid();
   renderSuggestions();
   document.getElementById('suggestions-section').style.display = 'none';
+  if (window._saveWeekPlan) window._saveWeekPlan();
 }
 
 // ── Recipe picker modal ──
@@ -2340,6 +2499,7 @@ function pickRecipe(index) {
   closePickerModal();
   renderWeekGrid();
   renderSuggestions();
+  if (window._saveWeekPlan) window._saveWeekPlan();
 }
 
 // ── Shopping list ──
@@ -2678,13 +2838,13 @@ function confirmImport() {
   if (!pendingImportRecipe) return;
   allRecipes.push(pendingImportRecipe);
   allRecipes.sort((a,b) => a.name.localeCompare(b.name));
+  if (window._saveRecipe) window._saveRecipe(pendingImportRecipe);
   if (document.getElementById('stats-section').style.display === 'none' && allRecipes.length === 1) {
     document.getElementById('upload-zone').style.display = 'none';
     document.getElementById('stats-section').style.display = 'block';
   }
   renderLibrary();
   closeUrlImport();
-  // Flash confirmation
   const sub = document.getElementById('library-sub');
   const prev = sub.textContent;
   sub.textContent = `✅ "${pendingImportRecipe.name}" added to your library!`;
