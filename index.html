@@ -2760,7 +2760,6 @@ Rules:
 }
 
 async function printShopping() {
-  console.log('printShopping() called, items:', window._lastShoppingData?.length);
   const items = window._lastShoppingData;
   if (!items || !items.length) return;
 
@@ -3270,6 +3269,43 @@ function confirmImport() {
   setTimeout(() => { sub.textContent = prev; sub.style.color = ''; }, 3000);
   pendingImportRecipe = null;
 }
+
+// ── Expose all functions used by onclick attributes to window scope ──
+// (Required because the Firebase module script creates a separate scope)
+window.showPage = showPage;
+window.printShopping = printShopping;
+window.copyShoppingList = copyShoppingList;
+window.toggleShoppingView = toggleShoppingView;
+window.toggleCheck = toggleCheck;
+window.goToShopping = goToShopping;
+window.openRecipe = openRecipe;
+window.closeModalDirect = closeModalDirect;
+window.closeModal = closeModal;
+window.toggleEditMode = toggleEditMode;
+window.saveEdit = saveEdit;
+window.cancelEdit = cancelEdit;
+window.deleteIng = deleteIng;
+window.addNewIng = addNewIng;
+window.toggleIngWic = toggleIngWic;
+window.setFilter = setFilter;
+window.filterRecipes = filterRecipes;
+window.handleFiles = handleFiles;
+window.openUrlImport = openUrlImport;
+window.closeUrlImport = closeUrlImport;
+window.setImportUrl = setImportUrl;
+window.startUrlImport = startUrlImport;
+window.confirmImport = confirmImport;
+window.openPickerModal = openPickerModal;
+window.closePickerModal = closePickerModal;
+window.renderPickerList = renderPickerList;
+window.pickRecipe = pickRecipe;
+window.clearCell = clearCell;
+window.clearWeek = clearWeek;
+window.addAnchor = addAnchor;
+window.removeAnchor = removeAnchor;
+window.renderAnchorSearch = renderAnchorSearch;
+window.addSuggestionToWeek = addSuggestionToWeek;
+window.initPlanner = initPlanner;
 </script>
 </body>
 </html>
