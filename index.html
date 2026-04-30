@@ -856,20 +856,30 @@
     gap: 10px;
     margin-bottom: 1.5rem;
   }
+
+  /* ── View: WIC vs Buy columns ── */
   .shopping-columns {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1.25rem;
   }
   @media (max-width: 640px) { .shopping-columns { grid-template-columns: 1fr; } }
-  .shopping-col {
+
+  /* ── View: By store section ── */
+  .shopping-sections {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .shopping-col, .shopping-section-card {
     background: var(--warm-white);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     overflow: hidden;
   }
   .shopping-col-header {
-    padding: 1rem 1.25rem;
+    padding: 0.875rem 1.25rem;
     font-family: 'Lora', serif;
     font-size: 15px;
     font-weight: 600;
@@ -879,20 +889,104 @@
   }
   .shopping-col-header.wic-col { background: var(--sage-light); color: #2D5E30; border-bottom: 1px solid #C5DCC6; }
   .shopping-col-header.buy-col { background: var(--amber-light); color: #7A4E1A; border-bottom: 1px solid #F2D5AA; }
+  .shopping-section-header {
+    padding: 0.75rem 1.25rem;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+    background: #FDFCFA;
+    color: var(--bark);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
   .shopping-item {
     display: flex;
     align-items: flex-start;
     gap: 10px;
-    padding: 9px 1.25rem;
+    padding: 8px 1.25rem;
     border-bottom: 1px solid var(--border);
     font-size: 14px;
     color: var(--text-primary);
   }
   .shopping-item:last-child { border-bottom: none; }
-  .shopping-item input[type="checkbox"] { margin-top: 2px; flex-shrink: 0; accent-color: var(--sage); width: 15px; height: 15px; cursor: pointer; }
+  .shopping-item input[type="checkbox"] {
+    margin-top: 2px;
+    flex-shrink: 0;
+    accent-color: var(--sage);
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+  }
   .shopping-item label { cursor: pointer; line-height: 1.4; flex: 1; }
   .shopping-item label.checked { text-decoration: line-through; color: var(--text-muted); }
   .shopping-qty { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+  .wic-dot-inline {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #1E7E34;
+    display: inline-block;
+    flex-shrink: 0;
+    margin-top: 5px;
+  }
+
+  /* ── Print styles ── */
+  .print-header { display: none; }
+
+  @media print {
+    .no-print { display: none !important; }
+    header { display: none !important; }
+    nav { display: none !important; }
+    .page { display: block !important; }
+    #page-recipes, #page-benefits, #page-planner { display: none !important; }
+    #page-shopping { display: block !important; }
+    body { background: white; font-size: 12px; }
+    main { padding: 0; max-width: 100%; }
+
+    .print-header {
+      display: block !important;
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 2px solid #3D2B1F;
+    }
+    .print-title {
+      font-family: 'Lora', serif;
+      font-size: 20px;
+      font-weight: 600;
+      color: #3D2B1F;
+      margin-bottom: 4px;
+    }
+    .print-meta { font-size: 12px; color: #6B5A4E; }
+
+    .shopping-sections {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+    }
+    .shopping-columns {
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+    .shopping-section-card, .shopping-col {
+      border: 1px solid #C8BAA8;
+      break-inside: avoid;
+      border-radius: 6px;
+    }
+    .shopping-item {
+      padding: 4px 10px;
+      font-size: 12px;
+    }
+    .shopping-item input[type="checkbox"] {
+      width: 12px;
+      height: 12px;
+    }
+    .shopping-summary { display: none; }
+    .shopping-col-header, .shopping-section-header {
+      padding: 6px 10px;
+      font-size: 12px;
+    }
+  }
   .source-link { font-size: 12px; color: var(--wic-blue-mid); text-decoration: none; }
   .source-link:hover { text-decoration: underline; }
 
@@ -1512,24 +1606,30 @@
 
   <!-- ══ SHOPPING PAGE ══ -->
   <div id="page-shopping" class="page">
-    <div class="page-header">
+    <div class="page-header no-print">
       <div>
         <div class="page-title">Shopping List</div>
         <div class="page-sub" id="shopping-sub">Generated from your weekly meal plan</div>
       </div>
       <div style="display:flex;gap:8px;">
-        <button class="btn-secondary" onclick="copyShoppingList()">📋 Copy List</button>
-        <button class="btn-primary" onclick="window.print()">🖨 Print</button>
+        <button class="btn-secondary" onclick="copyShoppingList()">📋 Copy</button>
+        <button class="btn-secondary" onclick="toggleShoppingView()" id="view-toggle-btn">🗂 By Section</button>
+        <button class="btn-primary" onclick="printShopping()">🖨 Print</button>
       </div>
     </div>
-    <div id="shopping-empty" class="coming-soon">
+    <div id="shopping-empty" class="coming-soon no-print">
       <span class="coming-soon-icon">📅</span>
       <h2>Plan your week first</h2>
       <p>Head to the Meal Planner tab, fill in your week, then click "Generate Shopping List" to see everything here.</p>
     </div>
     <div id="shopping-content" style="display:none;">
-      <div class="shopping-summary" id="shopping-summary"></div>
-      <div class="shopping-columns" id="shopping-columns"></div>
+      <div class="shopping-summary no-print" id="shopping-summary"></div>
+      <!-- Print header (only shows when printing) -->
+      <div class="print-header">
+        <div class="print-title">🌿 WIC Meal Planner — Shopping List</div>
+        <div class="print-meta" id="print-meta"></div>
+      </div>
+      <div id="shopping-list-body"></div>
     </div>
   </div>
 
@@ -2503,9 +2603,91 @@ function pickRecipe(index) {
 }
 
 // ── Shopping list ──
+let shoppingViewMode = 'wic'; // 'wic' or 'section'
+
+// Grocery section definitions — order matters (this is store aisle order)
+const GROCERY_SECTIONS = [
+  {
+    key: 'produce', label: 'Produce', icon: '🥦',
+    keywords: ['apple','banana','lemon','lime','orange','grapefruit','strawberr','blueberr',
+      'raspberr','blackberr','mango','peach','pear','grape','plum','cherry','watermelon',
+      'cantaloupe','pineapple','papaya','kiwi','avocado','tomato','potato','sweet potato',
+      'onion','scallion','green onion','shallot','leek','garlic','carrot','celery','cucumber',
+      'zucchini','squash','broccoli','cauliflower','cabbage','spinach','kale','lettuce',
+      'chard','arugula','mushroom','pepper','jalapeño','corn','pea','eggplant','beet',
+      'radish','turnip','asparagus','artichoke','brussels','collard','fennel','ginger',
+      'cilantro','parsley','basil','herb','fresh','slaw','coleslaw','scallion'],
+  },
+  {
+    key: 'dairy', label: 'Dairy & Eggs', icon: '🥛',
+    keywords: ['milk','cheese','yogurt','egg','eggs','butter','cream','sour cream',
+      'cheddar','mozzarella','parmesan','feta','ricotta','cream cheese','string cheese',
+      'colby','monterey','swiss','american cheese','goat cheese','brie'],
+  },
+  {
+    key: 'meat', label: 'Meat & Seafood', icon: '🥩',
+    keywords: ['chicken','beef','pork','turkey','lamb','shrimp','salmon','tuna','cod',
+      'tilapia','halibut','sausage','bacon','ham','steak','ground beef','ground turkey',
+      'ground chicken','canned tuna','canned salmon','sardine','anchov','mackerel','fish'],
+  },
+  {
+    key: 'grains', label: 'Bread & Grains', icon: '🌾',
+    keywords: ['bread','tortilla','pasta','rice','oat','oatmeal','noodle','flour',
+      'brown rice','whole wheat','panko','breadcrumb','pita','naan','baguette',
+      'cracker','cereal','quinoa','couscous','barley','cornmeal','polenta'],
+  },
+  {
+    key: 'canned', label: 'Canned & Dry Goods', icon: '🥫',
+    keywords: ['canned','can of','beans','lentil','chickpea','black bean','kidney bean',
+      'pinto bean','white bean','navy bean','tomato sauce','diced tomato','crushed tomato',
+      'tomato paste','coconut milk','broth','stock','soup','salsa','corn','artichoke heart',
+      'roasted pepper','sun-dried','dried bean','dried lentil'],
+  },
+  {
+    key: 'condiments', label: 'Condiments & Sauces', icon: '🫙',
+    keywords: ['oil','vinegar','soy sauce','hot sauce','sriracha','ketchup','mustard',
+      'mayo','mayonnaise','ranch','tahini','peanut butter','honey','maple syrup',
+      'worcestershire','fish sauce','hoisin','oyster sauce','teriyaki','bbq',
+      'buffalo sauce','miso','nutritional yeast'],
+  },
+  {
+    key: 'spices', label: 'Spices & Baking', icon: '🧂',
+    keywords: ['salt','pepper','powder','seasoning','spice','cumin','paprika','turmeric',
+      'oregano','thyme','rosemary','basil','parsley','chili','cayenne','cinnamon',
+      'nutmeg','cardamom','sugar','brown sugar','flour','baking','vanilla','extract',
+      'cocoa','chocolate'],
+  },
+  {
+    key: 'frozen', label: 'Frozen', icon: '🧊',
+    keywords: ['frozen','ice cream','popsicle','edamame frozen'],
+  },
+  {
+    key: 'other', label: 'Other', icon: '🛒',
+    keywords: [],
+  },
+];
+
+function assignSection(ingredient) {
+  const lower = ingredient.toLowerCase();
+  for (const section of GROCERY_SECTIONS) {
+    if (section.key === 'other') continue;
+    if (section.keywords.some(kw => lower.includes(kw))) return section.key;
+  }
+  return 'other';
+}
+
 function goToShopping() {
   showPage('shopping');
 }
+
+function toggleShoppingView() {
+  shoppingViewMode = shoppingViewMode === 'wic' ? 'section' : 'wic';
+  document.getElementById('view-toggle-btn').textContent =
+    shoppingViewMode === 'wic' ? '🗂 By Section' : '✅ By WIC';
+  renderShoppingBody(window._lastShoppingData);
+}
+
+let _lastShoppingData = null;
 
 function renderShopping() {
   const allPlaced = weekPlan.flat().filter(x => x !== null);
@@ -2517,81 +2699,148 @@ function renderShopping() {
   document.getElementById('shopping-empty').style.display = 'none';
   document.getElementById('shopping-content').style.display = '';
 
-  // Collect all ingredients from planned recipes
-  const wicItems = {};
-  const buyItems = {};
-
+  // Collect all ingredients
+  const itemMap = {};
   allPlaced.forEach(ri => {
     const r = allRecipes[ri];
     r.ingredients.forEach(ing => {
       const key = ing.toLowerCase().trim();
-      const isWic = isWicEligibleWithOverride(ing, ri);
-      const target = isWic ? wicItems : buyItems;
-      if (!target[key]) target[key] = { text: ing, count: 0, recipes: [] };
-      target[key].count++;
-      if (!target[key].recipes.includes(r.name)) target[key].recipes.push(r.name);
+      if (!itemMap[key]) {
+        itemMap[key] = {
+          text: ing,
+          count: 0,
+          recipes: [],
+          isWic: isWicEligibleWithOverride(ing, ri),
+          section: assignSection(ing),
+        };
+      }
+      itemMap[key].count++;
+      if (!itemMap[key].recipes.includes(r.name)) itemMap[key].recipes.push(r.name);
     });
   });
+
+  const items = Object.values(itemMap).sort((a,b) => a.text.localeCompare(b.text));
+  _lastShoppingData = items;
+  window._lastShoppingData = items;
 
   // Summary stats
   const uniqueRecipes = new Set(allPlaced).size;
   const totalMeals = allPlaced.length;
-  const wicCount = Object.keys(wicItems).length;
-  const buyCount = Object.keys(buyItems).length;
+  const wicCount = items.filter(i => i.isWic).length;
+  const buyCount = items.filter(i => !i.isWic).length;
+
   document.getElementById('shopping-summary').innerHTML = `
     <div class="stat-card"><span class="stat-num">${totalMeals}</span><span class="stat-label">Meals Planned</span></div>
     <div class="stat-card"><span class="stat-num">${uniqueRecipes}</span><span class="stat-label">Recipes</span></div>
     <div class="stat-card" style="border-color:#C5DCC6;"><span class="stat-num" style="color:#2D5E30;">${wicCount}</span><span class="stat-label">WIC Items</span></div>
-    <div class="stat-card" style="border-color:#F2D5AA;"><span class="stat-num" style="color:#7A4E1A;">${buyCount}</span><span class="stat-label">Items to Buy</span></div>`;
+    <div class="stat-card" style="border-color:#F2D5AA;"><span class="stat-num" style="color:#7A4E1A;">${buyCount}</span><span class="stat-label">Buy Yourself</span></div>`;
 
-  document.getElementById('shopping-sub').textContent = `${totalMeals} meals • ${wicCount + buyCount} ingredients`;
+  document.getElementById('shopping-sub').textContent =
+    `${totalMeals} meals • ${items.length} ingredients`;
 
-  const makeList = (items, id) => Object.values(items)
-    .sort((a,b) => a.text.localeCompare(b.text))
-    .map((item, idx) => {
-      const cbId = `${id}-${idx}`;
-      return `<div class="shopping-item">
-        <input type="checkbox" id="${cbId}" onchange="toggleCheck(this)">
-        <div style="flex:1;">
-          <label for="${cbId}">${item.text}</label>
-          ${item.count > 1 ? `<div class="shopping-qty">Used in ${item.count} recipes</div>` : ''}
-        </div>
-      </div>`;
-    }).join('');
+  // Print meta
+  const weekLabel = `Week of ${new Date().toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'})}`;
+  document.getElementById('print-meta').textContent = weekLabel + ` • ${uniqueRecipes} recipes • ${items.length} items`;
 
-  document.getElementById('shopping-columns').innerHTML = `
+  renderShoppingBody(items);
+}
+
+function renderShoppingBody(items) {
+  if (!items) return;
+  const container = document.getElementById('shopping-list-body');
+
+  if (shoppingViewMode === 'wic') {
+    renderWicView(items, container);
+  } else {
+    renderSectionView(items, container);
+  }
+}
+
+function makeShoppingItem(item, id) {
+  const cbId = `cb-${id}`;
+  return `<div class="shopping-item">
+    <input type="checkbox" id="${cbId}" onchange="toggleCheck(this)">
+    <div style="flex:1;">
+      <label for="${cbId}">
+        ${item.isWic ? '<span class="wic-dot-inline"></span> ' : ''}${item.text}
+      </label>
+      ${item.count > 1 ? `<div class="shopping-qty">Used in ${item.count} recipes</div>` : ''}
+    </div>
+  </div>`;
+}
+
+function renderWicView(items, container) {
+  const wicItems = items.filter(i => i.isWic);
+  const buyItems = items.filter(i => !i.isWic);
+
+  container.innerHTML = `<div class="shopping-columns">
     <div class="shopping-col">
-      <div class="shopping-col-header wic-col">✅ WIC-Eligible <span style="font-size:12px;font-weight:400;margin-left:4px;">(${wicCount} items)</span></div>
-      ${makeList(wicItems, 'wic') || '<div style="padding:1rem 1.25rem;font-size:13px;color:var(--text-muted);font-style:italic;">No WIC items this week</div>'}
+      <div class="shopping-col-header wic-col">✅ WIC-Eligible <span style="font-size:12px;font-weight:400;margin-left:4px;">(${wicItems.length})</span></div>
+      ${wicItems.length ? wicItems.map((item,i) => makeShoppingItem(item, 'wic'+i)).join('') : '<div style="padding:1rem 1.25rem;font-size:13px;color:var(--text-muted);font-style:italic;">No WIC items this week</div>'}
     </div>
     <div class="shopping-col">
-      <div class="shopping-col-header buy-col">🛍 Buy Yourself <span style="font-size:12px;font-weight:400;margin-left:4px;">(${buyCount} items)</span></div>
-      ${makeList(buyItems, 'buy') || '<div style="padding:1rem 1.25rem;font-size:13px;color:var(--text-muted);font-style:italic;">No extra items this week</div>'}
+      <div class="shopping-col-header buy-col">🛍 Buy Yourself <span style="font-size:12px;font-weight:400;margin-left:4px;">(${buyItems.length})</span></div>
+      ${buyItems.length ? buyItems.map((item,i) => makeShoppingItem(item, 'buy'+i)).join('') : '<div style="padding:1rem 1.25rem;font-size:13px;color:var(--text-muted);font-style:italic;">No extra items</div>'}
+    </div>
+  </div>`;
+}
+
+function renderSectionView(items, container) {
+  let html = '<div class="shopping-sections">';
+  GROCERY_SECTIONS.forEach(section => {
+    const sectionItems = items.filter(i => i.section === section.key);
+    if (!sectionItems.length) return;
+    html += `<div class="shopping-section-card">
+      <div class="shopping-section-header">${section.icon} ${section.label} <span style="font-size:11px;color:var(--text-muted);font-weight:400;text-transform:none;letter-spacing:0;">(${sectionItems.length})</span></div>
+      ${sectionItems.map((item,i) => makeShoppingItem(item, section.key+i)).join('')}
     </div>`;
+  });
+  html += '</div>';
+  container.innerHTML = html;
 }
 
 function toggleCheck(cb) {
   cb.nextElementSibling.querySelector('label').classList.toggle('checked', cb.checked);
 }
 
+function printShopping() {
+  // Switch to section view for printing (more useful at the store)
+  const wasSectionView = shoppingViewMode === 'section';
+  if (!wasSectionView) {
+    shoppingViewMode = 'section';
+    renderShoppingBody(window._lastShoppingData);
+  }
+  window.print();
+  // Restore previous view after print dialog
+  if (!wasSectionView) {
+    shoppingViewMode = 'wic';
+    document.getElementById('view-toggle-btn').textContent = '🗂 By Section';
+    renderShoppingBody(window._lastShoppingData);
+  }
+}
+
 function copyShoppingList() {
-  const allPlaced = weekPlan.flat().filter(x => x !== null);
-  if (!allPlaced.length) return;
-  const wicLines = [], buyLines = [];
-  const seen = new Set();
-  allPlaced.forEach(ri => {
-    allRecipes[ri].ingredients.forEach(ing => {
-      const key = ing.toLowerCase().trim();
-      if (seen.has(key)) return;
-      seen.add(key);
-      (isWicEligibleWithOverride(ing, ri) ? wicLines : buyLines).push(ing);
+  const items = window._lastShoppingData;
+  if (!items || !items.length) return;
+
+  let text = `🌿 WIC MEAL PLANNER — SHOPPING LIST\n`;
+  text += `${new Date().toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'})}\n\n`;
+
+  // Group by section for the copy output
+  GROCERY_SECTIONS.forEach(section => {
+    const sectionItems = items.filter(i => i.section === section.key);
+    if (!sectionItems.length) return;
+    text += `${section.icon} ${section.label.toUpperCase()}\n`;
+    sectionItems.forEach(item => {
+      text += `  ${item.isWic ? '✅' : '☐'} ${item.text}\n`;
     });
+    text += '\n';
   });
-  const text = `WIC-ELIGIBLE ITEMS:\n${wicLines.sort().map(i => '☐ ' + i).join('\n')}\n\nBUY YOURSELF:\n${buyLines.sort().map(i => '☐ ' + i).join('\n')}`;
+
   navigator.clipboard.writeText(text).then(() => {
     const btn = event.target;
     btn.textContent = '✓ Copied!';
-    setTimeout(() => btn.textContent = '📋 Copy List', 2000);
+    setTimeout(() => btn.textContent = '📋 Copy', 2000);
   });
 }
 
