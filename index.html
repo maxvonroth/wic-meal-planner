@@ -2606,60 +2606,77 @@ function pickRecipe(index) {
 let shoppingViewMode = 'wic'; // 'wic' or 'section'
 
 // Grocery section definitions — order matters (this is store aisle order)
+// Grocery section definitions — order matters (store aisle order)
 const GROCERY_SECTIONS = [
   {
     key: 'produce', label: 'Produce', icon: '🥦',
     keywords: ['apple','banana','lemon','lime','orange','grapefruit','strawberr','blueberr',
       'raspberr','blackberr','mango','peach','pear','grape','plum','cherry','watermelon',
-      'cantaloupe','pineapple','papaya','kiwi','avocado','tomato','potato','sweet potato',
-      'onion','scallion','green onion','shallot','leek','garlic','carrot','celery','cucumber',
-      'zucchini','squash','broccoli','cauliflower','cabbage','spinach','kale','lettuce',
-      'chard','arugula','mushroom','pepper','jalapeño','corn','pea','eggplant','beet',
-      'radish','turnip','asparagus','artichoke','brussels','collard','fennel','ginger',
-      'cilantro','parsley','basil','herb','fresh','slaw','coleslaw','scallion'],
+      'cantaloupe','pineapple','papaya','kiwi','avocado','tomatoes','potato','sweet potato',
+      'onion','scallion','green onion','shallot','leek','fresh garlic','garlic clove',
+      'carrot','celery','cucumber','zucchini','squash','broccoli','cauliflower','cabbage',
+      'spinach','kale','lettuce','chard','arugula','mushroom','bell pepper','jalapeño',
+      'poblano','fresh corn','snap pea','green bean','eggplant','beet','radish','turnip',
+      'asparagus','artichoke','brussels sprout','collard','fennel','bok choy','cilantro',
+      'fresh parsley','fresh basil','fresh herb','slaw','coleslaw','fresh ginger',
+      'head of','bunch of','ripe mango','fresh tomato','roma tomato','cherry tomato'],
   },
   {
     key: 'dairy', label: 'Dairy & Eggs', icon: '🥛',
-    keywords: ['milk','cheese','yogurt','egg','eggs','butter','cream','sour cream',
-      'cheddar','mozzarella','parmesan','feta','ricotta','cream cheese','string cheese',
-      'colby','monterey','swiss','american cheese','goat cheese','brie'],
+    keywords: ['milk','cheddar','mozzarella','parmesan','feta','ricotta','cream cheese',
+      'string cheese','colby','monterey jack','swiss cheese','american cheese','goat cheese',
+      'brie','provolone','muenster','yogurt','greek yogurt','sour cream','heavy cream',
+      'half and half','whipping cream','butter','egg','eggs','dry milk','powdered milk'],
   },
   {
     key: 'meat', label: 'Meat & Seafood', icon: '🥩',
-    keywords: ['chicken','beef','pork','turkey','lamb','shrimp','salmon','tuna','cod',
-      'tilapia','halibut','sausage','bacon','ham','steak','ground beef','ground turkey',
-      'ground chicken','canned tuna','canned salmon','sardine','anchov','mackerel','fish'],
+    keywords: ['chicken breast','chicken thigh','chicken drumstick','ground chicken',
+      'rotisserie chicken','beef','ground beef','steak','pork','bacon','ham','sausage',
+      'lamb','turkey breast','ground turkey','shrimp','fresh salmon','fresh tuna',
+      'cod','tilapia','halibut','canned tuna','canned salmon','sardine','mackerel',
+      'deli meat','prosciutto','pepperoni','salami','anchov'],
   },
   {
     key: 'grains', label: 'Bread & Grains', icon: '🌾',
-    keywords: ['bread','tortilla','pasta','rice','oat','oatmeal','noodle','flour',
-      'brown rice','whole wheat','panko','breadcrumb','pita','naan','baguette',
-      'cracker','cereal','quinoa','couscous','barley','cornmeal','polenta'],
+    keywords: ['bread','bun','roll','tortilla','brown rice','white rice','pasta',
+      'whole wheat pasta','noodle','ramen','spaghetti','penne','fettuccine','lasagna',
+      'oatmeal','oats','rolled oats','steel cut oat','quinoa','couscous','barley',
+      'polenta','cornmeal','panko','breadcrumb','pita','naan','baguette','cracker',
+      'cereal','granola','all-purpose flour','whole wheat flour','corn flour'],
   },
   {
     key: 'canned', label: 'Canned & Dry Goods', icon: '🥫',
-    keywords: ['canned','can of','beans','lentil','chickpea','black bean','kidney bean',
-      'pinto bean','white bean','navy bean','tomato sauce','diced tomato','crushed tomato',
-      'tomato paste','coconut milk','broth','stock','soup','salsa','corn','artichoke heart',
-      'roasted pepper','sun-dried','dried bean','dried lentil'],
+    keywords: ['canned','can of','dried beans','dry beans','black beans','kidney beans',
+      'pinto beans','white beans','navy beans','cannellini','garbanzo','chickpeas','lentils',
+      'split peas','diced tomatoes','crushed tomatoes','whole tomatoes','tomato sauce',
+      'tomato paste','coconut milk','vegetable broth','chicken broth','beef broth','stock',
+      'condensed soup','roasted peppers','sun-dried tomato','artichoke hearts',
+      'canned corn','canned peas','canned fruit','dried fruit','raisins','dried cranberr'],
   },
   {
     key: 'condiments', label: 'Condiments & Sauces', icon: '🫙',
-    keywords: ['oil','vinegar','soy sauce','hot sauce','sriracha','ketchup','mustard',
-      'mayo','mayonnaise','ranch','tahini','peanut butter','honey','maple syrup',
-      'worcestershire','fish sauce','hoisin','oyster sauce','teriyaki','bbq',
-      'buffalo sauce','miso','nutritional yeast'],
+    keywords: ['olive oil','vegetable oil','coconut oil','sesame oil','canola oil',
+      'cooking oil','cooking spray','vinegar','soy sauce','hot sauce','sriracha',
+      'ketchup','mustard','mayonnaise','mayo','ranch dressing','salad dressing',
+      'tahini','peanut butter','almond butter','honey','maple syrup','agave',
+      'worcestershire','fish sauce','hoisin','oyster sauce','teriyaki','bbq sauce',
+      'buffalo sauce','miso paste','nutritional yeast','salsa','pasta sauce',
+      'marinara','tomato sauce jar','enchilada sauce'],
   },
   {
     key: 'spices', label: 'Spices & Baking', icon: '🧂',
-    keywords: ['salt','pepper','powder','seasoning','spice','cumin','paprika','turmeric',
-      'oregano','thyme','rosemary','basil','parsley','chili','cayenne','cinnamon',
-      'nutmeg','cardamom','sugar','brown sugar','flour','baking','vanilla','extract',
-      'cocoa','chocolate'],
+    keywords: ['salt','black pepper','white pepper','red pepper flakes','garlic powder',
+      'onion powder','cumin','paprika','smoked paprika','turmeric','oregano','thyme',
+      'rosemary','dried basil','dried parsley','chili powder','cayenne','cinnamon',
+      'nutmeg','cardamom','allspice','ginger powder','curry powder','garam masala',
+      'italian seasoning','everything bagel','seasoning blend','baking powder',
+      'baking soda','cornstarch','arrowroot','sugar','brown sugar','powdered sugar',
+      'vanilla extract','cocoa powder','chocolate chips','yeast'],
   },
   {
     key: 'frozen', label: 'Frozen', icon: '🧊',
-    keywords: ['frozen','ice cream','popsicle','edamame frozen'],
+    keywords: ['frozen peas','frozen corn','frozen spinach','frozen broccoli',
+      'frozen mixed','frozen fruit','frozen berries','frozen edamame','frozen','ice cream'],
   },
   {
     key: 'other', label: 'Other', icon: '🛒',
@@ -2668,7 +2685,9 @@ const GROCERY_SECTIONS = [
 ];
 
 function assignSection(ingredient) {
-  const lower = ingredient.toLowerCase();
+  const lower = ingredient.toLowerCase().trim();
+
+  // Check each section in order — first match wins
   for (const section of GROCERY_SECTIONS) {
     if (section.key === 'other') continue;
     if (section.keywords.some(kw => lower.includes(kw))) return section.key;
