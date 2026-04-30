@@ -1614,8 +1614,10 @@
       <div style="display:flex;gap:8px;">
         <button class="btn-secondary" onclick="copyShoppingList()">📋 Copy</button>
         <button class="btn-secondary" onclick="toggleShoppingView()" id="view-toggle-btn">🗂 By Section</button>
-        <button class="btn-primary" onclick="printShopping()">🖨 Print</button>
+        <button class="btn-primary" id="print-btn" onclick="printShopping()">🖨 Print</button>
       </div>
+    </div>
+    <div id="shopping-sort-status" style="display:none;font-size:13px;color:var(--sage);margin-bottom:1rem;padding:10px 14px;background:var(--sage-light);border:1px solid #C5DCC6;border-radius:var(--radius-md);"></div>
     </div>
     <div id="shopping-empty" class="coming-soon no-print">
       <span class="coming-soon-icon">📅</span>
@@ -2753,38 +2755,43 @@ async function printShopping() {
   const items = window._lastShoppingData;
   if (!items || !items.length) return;
 
-  const btn = document.querySelector('[onclick="printShopping()"]');
+  const btn = document.getElementById('print-btn');
+  const statusEl = document.getElementById('shopping-sort-status');
   const originalText = btn.textContent;
+
   btn.textContent = '⏳ Sorting…';
   btn.disabled = true;
+  statusEl.style.display = '';
+  statusEl.textContent = 'Asking Claude to sort your ingredients…';
 
   try {
-    // Use AI to sort ingredients into sections
     const sortedItems = await sortIngredientsWithAI(items);
-
-    // Deduplicate salt/pepper type items across sections before rendering
     const deduped = deduplicateItems(sortedItems);
-
-    // Store sorted version and switch to section view
     window._lastShoppingData = deduped;
+    window._aiSorted = true;
     shoppingViewMode = 'section';
+    document.getElementById('view-toggle-btn').textContent = '✅ By WIC';
     renderShoppingBody(deduped);
+    statusEl.textContent = '✅ Sorted! Opening print dialog…';
 
-    // Small delay to let render complete before print dialog
     setTimeout(() => {
       window.print();
       btn.textContent = originalText;
       btn.disabled = false;
-    }, 300);
+      setTimeout(() => { statusEl.style.display = 'none'; }, 2000);
+    }, 400);
 
   } catch(e) {
-    console.error('AI sort failed, falling back to keyword sort:', e);
-    // Fallback to keyword sorting silently
+    console.error('AI sort error:', e);
+    statusEl.textContent = `⚠️ AI sort failed: ${e.message} — using basic sort instead.`;
+    statusEl.style.color = '#C0392B';
     shoppingViewMode = 'section';
     renderShoppingBody(items);
-    setTimeout(() => { window.print(); }, 300);
-    btn.textContent = originalText;
-    btn.disabled = false;
+    setTimeout(() => {
+      window.print();
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }, 400);
   }
 }
 
