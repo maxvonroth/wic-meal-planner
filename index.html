@@ -1614,7 +1614,7 @@
       <div style="display:flex;gap:8px;">
         <button class="btn-secondary" onclick="copyShoppingList()">📋 Copy</button>
         <button class="btn-secondary" onclick="toggleShoppingView()" id="view-toggle-btn">🗂 By Section</button>
-        <button class="btn-primary" id="print-btn" onclick="printShopping()">🖨 Print</button>
+        <button type="button" class="btn-primary" id="print-btn" onclick="event.preventDefault(); printShopping();">🖨 Print</button>
       </div>
     </div>
     <div id="shopping-sort-status" style="display:none;font-size:13px;color:var(--sage);margin-bottom:1rem;padding:10px 14px;background:var(--sage-light);border:1px solid #C5DCC6;border-radius:var(--radius-md);"></div>
@@ -1782,11 +1782,15 @@ async function deleteRecipeFromFirestore(id) {
 async function saveWeekPlan() {
   try {
     setSyncStatus('saving', 'Saving…');
-    // Store recipe IDs instead of indices for portability
-    const plan = weekPlan.map(day =>
-      day.map(ri => (ri !== null && allRecipes[ri]) ? allRecipes[ri].id : null)
+    // Firestore doesn't support nested arrays — flatten to a single array of 14 slots
+    // Slot order: [mon_lunch, mon_dinner, tue_lunch, tue_dinner, ...]
+    const flatPlan = weekPlan.flat().map(ri =>
+      (ri !== null && allRecipes[ri]) ? allRecipes[ri].id : null
     );
-    await setDoc(doc(db, 'weekplan', 'current'), { plan, updatedAt: new Date().toISOString() });
+    await setDoc(doc(db, 'weekplan', 'current'), {
+      flatPlan,
+      updatedAt: new Date().toISOString()
+    });
     setSyncStatus('ok', 'Saved');
   } catch(e) {
     console.error('Week plan save error:', e);
@@ -1811,15 +1815,19 @@ async function loadFromFirestore() {
     // Load week plan
     const planDoc = await getDoc(doc(db, 'weekplan', 'current'));
     if (planDoc.exists()) {
-      const savedPlan = planDoc.data().plan;
-      // Convert IDs back to indices
-      weekPlan = savedPlan.map(day =>
-        day.map(id => {
-          if (!id) return null;
-          const idx = allRecipes.findIndex(r => r.id === id);
-          return idx >= 0 ? idx : null;
-        })
-      );
+      const data = planDoc.data();
+      // Support both old nested format and new flat format
+      const flatPlan = data.flatPlan || (data.plan ? data.plan.flat() : null);
+      if (flatPlan && flatPlan.length === 14) {
+        // Unflatten back to 7x2 grid and convert IDs to indices
+        weekPlan = Array.from({length: 7}, (_, d) =>
+          [flatPlan[d * 2], flatPlan[d * 2 + 1]].map(id => {
+            if (!id) return null;
+            const idx = allRecipes.findIndex(r => r.id === id);
+            return idx >= 0 ? idx : null;
+          })
+        );
+      }
     }
 
     setSyncStatus('ok', 'Up to date');
@@ -2752,6 +2760,7 @@ Rules:
 }
 
 async function printShopping() {
+  console.log('printShopping() called, items:', window._lastShoppingData?.length);
   const items = window._lastShoppingData;
   if (!items || !items.length) return;
 
