@@ -2685,14 +2685,137 @@ const GROCERY_SECTIONS = [
 ];
 
 function assignSection(ingredient) {
+  // Fallback only — AI sorting replaces this for print/section view
   const lower = ingredient.toLowerCase().trim();
-
-  // Check each section in order — first match wins
   for (const section of GROCERY_SECTIONS) {
     if (section.key === 'other') continue;
     if (section.keywords.some(kw => lower.includes(kw))) return section.key;
   }
   return 'other';
+}
+
+// ── AI-powered grocery sorting ──
+async function sortIngredientsWithAI(items) {
+  const sectionNames = GROCERY_SECTIONS.filter(s => s.key !== 'other').map(s => s.key);
+  const ingredientList = items.map((item, i) => `${i}:${item.text}`).join('\n');
+
+  const prompt = `You are sorting a grocery shopping list into store sections.
+
+The sections are: ${sectionNames.join(', ')}, other
+
+For each ingredient below, assign exactly one section. Return ONLY a JSON object where keys are the ingredient index numbers and values are section names. No explanation, no markdown, just the JSON object.
+
+Ingredients:
+${ingredientList}
+
+Rules:
+- "onion powder", "garlic powder", "black pepper" → spices
+- "salt", "kosher salt", "sea salt" → spices  
+- Fresh vegetables and fruits → produce
+- Frozen vegetables/fruits → frozen
+- Canned or dried beans, lentils, canned tomatoes, broth → canned
+- Milk, cheese, yogurt, eggs, butter, cream → dairy
+- Raw meat, poultry, seafood, canned fish → meat
+- Bread, tortillas, pasta, rice, flour, oats, cereal → grains
+- Oils, vinegars, sauces, condiments, nut butters → condiments
+- Spices, dried herbs, baking powder, cornstarch, sugar, extracts → spices
+- Halloumi, tofu, tempeh → dairy (cheese/protein section)
+- Pizza dough, biscuit dough, refrigerator dough → grains
+- Water → other
+- Pickles, olives → condiments`;
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+
+  if (!response.ok) throw new Error('AI sorting failed');
+  const data = await response.json();
+  const text = data.content.map(b => b.text || '').join('').trim();
+
+  // Parse JSON — strip any accidental markdown fences
+  const clean = text.replace(/```json|```/g, '').trim();
+  const assignments = JSON.parse(clean);
+
+  // Apply assignments back to items
+  return items.map((item, i) => ({
+    ...item,
+    section: assignments[i] || assignSection(item.text)
+  }));
+}
+
+async function printShopping() {
+  const items = window._lastShoppingData;
+  if (!items || !items.length) return;
+
+  const btn = document.querySelector('[onclick="printShopping()"]');
+  const originalText = btn.textContent;
+  btn.textContent = '⏳ Sorting…';
+  btn.disabled = true;
+
+  try {
+    // Use AI to sort ingredients into sections
+    const sortedItems = await sortIngredientsWithAI(items);
+
+    // Deduplicate salt/pepper type items across sections before rendering
+    const deduped = deduplicateItems(sortedItems);
+
+    // Store sorted version and switch to section view
+    window._lastShoppingData = deduped;
+    shoppingViewMode = 'section';
+    renderShoppingBody(deduped);
+
+    // Small delay to let render complete before print dialog
+    setTimeout(() => {
+      window.print();
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }, 300);
+
+  } catch(e) {
+    console.error('AI sort failed, falling back to keyword sort:', e);
+    // Fallback to keyword sorting silently
+    shoppingViewMode = 'section';
+    renderShoppingBody(items);
+    setTimeout(() => { window.print(); }, 300);
+    btn.textContent = originalText;
+    btn.disabled = false;
+  }
+}
+
+function deduplicateItems(items) {
+  // Merge items that are clearly the same thing (e.g. "salt", "Salt and pepper", "1/2 teaspoon salt")
+  // Keep the most descriptive version, combine counts
+  const seen = new Map();
+  const result = [];
+
+  items.forEach(item => {
+    const lower = item.text.toLowerCase().trim();
+    // Simple dedup key: strip quantities and punctuation
+    const dedupKey = lower
+      .replace(/^[\d\/\s¼½¾⅓⅔⅛]+\s*(cup|cups|tbsp|tsp|oz|lb|tablespoon|teaspoon|pound|ounce|clove|cloves|head|can|bunch|sprig|sprigs|slice|slices|large|small|medium|whole)s?\s*/i, '')
+      .replace(/[,\.]/g, '')
+      .trim()
+      .slice(0, 30);
+
+    if (seen.has(dedupKey)) {
+      // Merge into existing — keep the more descriptive text
+      const existing = seen.get(dedupKey);
+      existing.count += item.count;
+      if (item.text.length > existing.text.length) existing.text = item.text;
+    } else {
+      const copy = {...item};
+      seen.set(dedupKey, copy);
+      result.push(copy);
+    }
+  });
+
+  return result;
 }
 
 function goToShopping() {
@@ -2741,6 +2864,7 @@ function renderShopping() {
   const items = Object.values(itemMap).sort((a,b) => a.text.localeCompare(b.text));
   _lastShoppingData = items;
   window._lastShoppingData = items;
+  window._aiSorted = false; // reset so AI re-sorts on next print/copy
 
   // Summary stats
   const uniqueRecipes = new Set(allPlaced).size;
@@ -2838,14 +2962,25 @@ function printShopping() {
   }
 }
 
-function copyShoppingList() {
-  const items = window._lastShoppingData;
+async function copyShoppingList() {
+  const btn = event.target;
+  let items = window._lastShoppingData;
   if (!items || !items.length) return;
+
+  // If we haven't AI-sorted yet, do it now
+  if (!window._aiSorted) {
+    btn.textContent = '⏳ Sorting…';
+    try {
+      items = await sortIngredientsWithAI(items);
+      items = deduplicateItems(items);
+      window._lastShoppingData = items;
+      window._aiSorted = true;
+    } catch(e) { /* use keyword sort fallback */ }
+  }
 
   let text = `🌿 WIC MEAL PLANNER — SHOPPING LIST\n`;
   text += `${new Date().toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'})}\n\n`;
 
-  // Group by section for the copy output
   GROCERY_SECTIONS.forEach(section => {
     const sectionItems = items.filter(i => i.section === section.key);
     if (!sectionItems.length) return;
@@ -2857,7 +2992,6 @@ function copyShoppingList() {
   });
 
   navigator.clipboard.writeText(text).then(() => {
-    const btn = event.target;
     btn.textContent = '✓ Copied!';
     setTimeout(() => btn.textContent = '📋 Copy', 2000);
   });
