@@ -1748,7 +1748,11 @@ const db = getFirestore(firebaseApp);
 const WORKER_URL = 'https://wic-helper.mvonroth.workers.dev';
 
 const WORKER_URL = 'https://wic-helper.mvonroth.workers.dev';
-const WORKER_PASSWORD = localStorage.getItem('wic_app_password') || '';
+let WORKER_PASSWORD = localStorage.getItem('wic_app_password') || '';
+if (!WORKER_PASSWORD) {
+  WORKER_PASSWORD = prompt('Enter app password to continue:') || '';
+  if (WORKER_PASSWORD) localStorage.setItem('wic_app_password', WORKER_PASSWORD);
+}
 
 // ── Sync status indicator ──
 function setSyncStatus(state, msg) {
