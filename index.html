@@ -1747,6 +1747,9 @@ const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
 const WORKER_URL = 'https://wic-helper.mvonroth.workers.dev';
 
+const WORKER_URL = 'https://wic-helper.mvonroth.workers.dev';
+const WORKER_PASSWORD = localStorage.getItem('wic_app_password') || '';
+
 // ── Sync status indicator ──
 function setSyncStatus(state, msg) {
   const el = document.getElementById('sync-status');
@@ -2737,7 +2740,7 @@ Rules:
 
   const response = await fetch(WORKER_URL + '/sort-ingredients', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-App-Password': WORKER_PASSWORD },
     body: JSON.stringify({ ingredients: items.map(i => i.text) })
   });
   if (!response.ok) throw new Error('AI sorting failed');
@@ -2758,7 +2761,7 @@ async function consolidateShoppingList(items) {
 
   const response = await fetch(WORKER_URL + '/consolidate-ingredients', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-App-Password': WORKER_PASSWORD },
     body: JSON.stringify({ sections })
   });
 
@@ -3095,7 +3098,7 @@ async function fetchWithFallback(url) {
       fetch: async () => {
         const r = await fetch(WORKER_URL + '/fetch-recipe', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'X-App-Password': WORKER_PASSWORD },
           body: JSON.stringify({ recipeUrl: url }),
           signal: AbortSignal.timeout(15000)
         });
