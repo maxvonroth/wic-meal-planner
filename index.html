@@ -2747,7 +2747,34 @@ Rules:
     section: sectionMap[item.text] || assignSection(item.text)
   }));
 }
+  
+async function consolidateShoppingList(items) {
+  // Group items by section
+  const sections = {};
+  items.forEach(item => {
+    if (!sections[item.section]) sections[item.section] = [];
+    sections[item.section].push({ text: item.text, isWic: item.isWic });
+  });
 
+  const response = await fetch(WORKER_URL + '/consolidate-ingredients', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sections })
+  });
+
+  if (!response.ok) throw new Error('Consolidation failed');
+  const consolidated = await response.json();
+
+  // Flatten back to items array
+  const result = [];
+  Object.entries(consolidated).forEach(([sectionKey, sectionItems]) => {
+    sectionItems.forEach(item => {
+      result.push({ text: item.text, isWic: item.isWic, section: sectionKey });
+    });
+  });
+  return result;
+}
+  
 async function printShopping() {
   const items = window._lastShoppingData;
   if (!items || !items.length) return;
@@ -2763,7 +2790,8 @@ async function printShopping() {
 
   try {
     const sortedItems = await sortIngredientsWithAI(items);
-    const deduped = deduplicateItems(sortedItems);
+    const consolidatedItems = await consolidateShoppingList(sortedItems);
+    const deduped = deduplicateItems(consolidatedItems);
     window._lastShoppingData = deduped;
     window._aiSorted = true;
     shoppingViewMode = 'section';
