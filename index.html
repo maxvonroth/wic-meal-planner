@@ -1746,8 +1746,6 @@ const firebaseConfig = {
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
 const WORKER_URL = 'https://wic-helper.mvonroth.workers.dev';
-
-const WORKER_URL = 'https://wic-helper.mvonroth.workers.dev';
 let WORKER_PASSWORD = localStorage.getItem('wic_app_password') || '';
 if (!WORKER_PASSWORD) {
   WORKER_PASSWORD = prompt('Enter app password to continue:') || '';
