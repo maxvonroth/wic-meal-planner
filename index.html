@@ -2742,17 +2742,11 @@ Rules:
   });
   if (!response.ok) throw new Error('AI sorting failed');
   const sectionMap = await response.json();
-  const text = JSON.stringify(sectionMap);
-
-  // Parse JSON — strip any accidental markdown fences
-  const clean = text.replace(/```json|```/g, '').trim();
-  const assignments = JSON.parse(clean);
-
-  // Apply assignments back to items
   return items.map((item) => ({
     ...item,
     section: sectionMap[item.text] || assignSection(item.text)
   }));
+}
 
 async function printShopping() {
   const items = window._lastShoppingData;
