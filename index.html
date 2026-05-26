@@ -1745,6 +1745,7 @@ const firebaseConfig = {
 
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
+const WORKER_URL = 'https://wic-helper.mvonroth.workers.dev';
 
 // ── Sync status indicator ──
 function setSyncStatus(state, msg) {
@@ -2734,30 +2735,24 @@ Rules:
 - Water → other
 - Pickles, olives → condiments`;
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const response = await fetch(WORKER_URL + '/sort-ingredients', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1000,
-      messages: [{ role: 'user', content: prompt }]
-    })
+    body: JSON.stringify({ ingredients: items.map(i => i.text) })
   });
-
   if (!response.ok) throw new Error('AI sorting failed');
-  const data = await response.json();
-  const text = data.content.map(b => b.text || '').join('').trim();
+  const sectionMap = await response.json();
+  const text = JSON.stringify(sectionMap);
 
   // Parse JSON — strip any accidental markdown fences
   const clean = text.replace(/```json|```/g, '').trim();
   const assignments = JSON.parse(clean);
 
   // Apply assignments back to items
-  return items.map((item, i) => ({
+  return items.map((item) => ({
     ...item,
-    section: assignments[i] || assignSection(item.text)
+    section: sectionMap[item.text] || assignSection(item.text)
   }));
-}
 
 async function printShopping() {
   const items = window._lastShoppingData;
