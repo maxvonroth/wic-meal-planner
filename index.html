@@ -1747,9 +1747,39 @@ const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
 const WORKER_URL = 'https://wic-helper.mvonroth.workers.dev';
 let WORKER_PASSWORD = localStorage.getItem('wic_app_password') || '';
+
+async function verifyAndSavePassword(password) {
+  const r = await fetch(WORKER_URL + '/', {
+    headers: { 'Content-Type': 'application/json', 'X-App-Password': password }
+  });
+  return r.status !== 401;
+}
+
+async function promptForPassword() {
+  while (true) {
+    const entry = prompt('Enter app password to continue:') || '';
+    if (!entry) continue;
+    const valid = await verifyAndSavePassword(entry);
+    if (valid) {
+      WORKER_PASSWORD = entry;
+      localStorage.setItem('wic_app_password', entry);
+      return;
+    } else {
+      alert('Incorrect password, please try again.');
+    }
+  }
+}
+
 if (!WORKER_PASSWORD) {
-  WORKER_PASSWORD = prompt('Enter app password to continue:') || '';
-  if (WORKER_PASSWORD) localStorage.setItem('wic_app_password', WORKER_PASSWORD);
+  promptForPassword();
+} else {
+  verifyAndSavePassword(WORKER_PASSWORD).then(valid => {
+    if (!valid) {
+      localStorage.removeItem('wic_app_password');
+      WORKER_PASSWORD = '';
+      promptForPassword();
+    }
+  });
 }
 
 // ── Sync status indicator ──
