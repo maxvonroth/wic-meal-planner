@@ -1,101 +1,89 @@
 # Maine WIC Meal Planner
 
-A personal web app built to help my family make the most of our Maine WIC food benefits. It combines a recipe library, a weekly meal planner, and a smart shopping list — all organized around what WIC will actually cover.
+A working web application built to help my family maximize our Maine WIC food benefits — designed, scoped, and shipped without writing a single line of code.
 
 **Live app:** [maxvonroth.github.io/wic-meal-planner](https://maxvonroth.github.io/wic-meal-planner)
 
 ---
 
-## Background
+## What This Project Actually Demonstrates
 
-WIC (Women, Infants, and Children) is a federal nutrition assistance program. Our household — two infants, a toddler, and a postpartum mom — participates in Maine's program, which covers specific categories of food: fresh produce, dairy, whole grains, legumes, eggs, and a few others. The tricky part is figuring out which of our favorite recipes actually align with those categories, and then building a shopping list that separates what WIC pays for from what we buy ourselves.
+This app exists because I had a real problem and figured out how to solve it using AI as the primary tool. I'm not a developer. I don't have a technical background. What I do have is the ability to identify a problem worth solving, break it into pieces, choose the right tools, and iterate until something useful ships.
 
-I built this app from scratch with no prior coding experience, using Claude (Anthropic's AI assistant) as a collaborative development partner across multiple sessions.
+Every feature in this app started as a plain-language description of what I needed. I worked with Claude (Anthropic's AI assistant) as a development partner across multiple sessions — scoping requirements, troubleshooting when things broke, making tradeoffs, and continuously refining based on how my wife (the primary user) actually interacted with it.
+
+That process — translating real-world needs into working AI-powered solutions — is what I'm looking to do professionally.
+
+---
+
+## The Problem
+
+WIC (Women, Infants, and Children) is a federal nutrition assistance program. Our household — two infants, a toddler, and a postpartum mom — participates in Maine's program. WIC covers specific food categories: fresh produce, dairy, whole grains, legumes, eggs, and a few others. The challenge is knowing which of your recipes align with those categories, and at the store, knowing exactly what goes on which part of the bill.
+
+There's no good tool for this. So I built one.
 
 ---
 
 ## What It Does
 
 ### Recipe Library
-- Holds 63 family recipes, imported in bulk from the Paprika recipe app
-- Each recipe is automatically analyzed to estimate how "WIC-friendly" it is based on its ingredients
-- Recipes can be searched, filtered, and opened for editing — ingredients, directions, notes, and recipe name are all editable
-- Vegetarian-adaptable recipes are automatically flagged with a badge
+63 family recipes imported in bulk from our existing recipe app, each automatically analyzed for WIC alignment. Searchable, filterable, and fully editable. Vegetarian-adaptable recipes are auto-flagged.
 
-### WIC Scoring
-- A custom scoring engine reads each recipe's ingredient list and runs it through two checks: first for disqualifiers (spices, oils, condiments, heavily processed items), then for WIC-eligible categories
-- Scores are shown visually per recipe so it's easy to see at a glance what fits well with our benefits
+### WIC Scoring Engine
+A custom two-step scoring system: first it checks for disqualifiers (oils, spices, condiments, heavily processed items), then scores against WIC-eligible categories. Every recipe gets a visual score so it's easy to plan around our benefits.
 
 ### Weekly Meal Planner
-- A 7-day grid for planning meals
-- You can designate "anchor" recipes for the week, and the app will suggest other recipes that share ingredients — reducing food waste and shopping complexity
+A 7-day planning grid. Designate anchor recipes for the week and the app suggests others that share ingredients — reducing both food waste and shopping complexity.
 
 ### Shopping List
-- Pulls ingredients from the week's planned meals
-- Automatically sorts items into two columns: what WIC covers vs. what to buy out of pocket
-- Can also be viewed organized by grocery section (produce, dairy, pantry, etc.)
-- AI-powered consolidation cleans up the list: combining duplicates, standardizing quantities, and stripping redundant entries
+Pulls from the week's meals and splits automatically into what WIC covers vs. what we pay for ourselves. Can also be sorted by grocery section. An AI layer consolidates the list — combining duplicates, standardizing quantities, removing redundant entries.
 
 ### URL Recipe Import
-- Paste a link to any recipe webpage and the app will attempt to extract and import it automatically
-- Uses AI to parse the page content when standard extraction isn't enough
+Paste any recipe link and the app extracts and imports it. AI handles the parsing when standard extraction isn't enough.
 
 ---
 
 ## How It's Built
 
-This is a single HTML file — no frameworks, no build process. The entire app lives in one file that's hosted for free on GitHub Pages. Here's what's running behind the scenes:
+A single HTML file hosted on GitHub Pages, with four external services wired together:
 
-### GitHub Pages
-Hosts the app at a public URL for free. Every time the source file is updated and pushed to GitHub, the live site updates automatically.
+| Service | Role |
+|---|---|
+| **GitHub Pages** | Free hosting — updates automatically when the file changes |
+| **Firebase (Google)** | Cloud database for real-time sync across devices |
+| **Cloudflare Workers** | Secure server-side middleman for AI calls and external requests |
+| **Anthropic Claude API** | Powers shopping list consolidation and recipe extraction |
 
-### Firebase Firestore (Google)
-A cloud database that stores recipes, notes, and the weekly meal plan. This is what allows the app to sync in real time across multiple devices — my wife and I can both open it on our phones and see the same data.
-
-### Cloudflare Workers
-A small server-side script that acts as a secure go-between for the app and external services. It handles two things the browser can't do directly for security reasons: calling the AI API and fetching recipes from other websites. It's protected by a password so only our household can use it.
-
-### Anthropic Claude API
-The AI layer. It powers the shopping list consolidation (cleaning up and combining ingredients intelligently) and recipe extraction from URLs (reading a webpage and pulling out the actual recipe).
-
-### Google Cloud Console
-Used only for one thing: locking down the Firebase API key so it can only be called from our app's domain — a basic security measure to prevent misuse.
+Choosing this stack was itself a design decision: free or near-free tiers across the board, no backend to maintain, and enough capability to handle everything the app needs.
 
 ---
 
-## Security
+## AI Integration Points
 
-The app has a PIN-based lock screen. The PIN is never stored anywhere — only a one-way cryptographic hash of it is kept in the source code. If no PIN has been set (as in this portfolio version), the app opens freely without any prompt.
+Rather than using AI as a novelty, each integration solves a specific problem where rules-based logic would fall short:
 
-The Cloudflare Worker that handles AI calls is separately password-protected and only accepts requests that include the correct credential.
+**Shopping list consolidation** — Ingredient lists from multiple recipes contain duplicates, inconsistent units, and redundant entries ("1 cup flour" and "2 cups flour" from different recipes). A rules-based deduplicator would need to anticipate every possible phrasing. AI handles the variation naturally.
+
+**Recipe extraction from URLs** — Recipe websites structure their content differently. Rather than writing scrapers for individual sites, AI reads the page and pulls out the relevant content regardless of how it's laid out.
+
+**WIC ingredient scoring** — Determining whether "low-sodium chicken broth" is a WIC-eligible protein or a disqualifying processed ingredient requires judgment, not just a keyword match. The scoring engine uses categorical logic informed by that kind of reasoning.
 
 ---
 
-## Notable Technical Challenges
+## Real-User Feedback Loop
 
-A few problems that came up during development that are worth highlighting:
-
-**CORS restrictions** — Browsers block web apps from calling certain APIs directly for security reasons. The Anthropic API is one of them. The solution was routing those calls through a Cloudflare Worker, which acts as a trusted server-side intermediary.
-
-**Firebase module scope** — Firebase loads as a JavaScript "module," which runs in an isolated scope. Any functions that needed to respond to button clicks had to be explicitly attached to the `window` object, or the browser couldn't find them.
-
-**Firestore nested arrays** — Firebase's database doesn't support arrays-within-arrays. The weekly meal plan grid (7 days × multiple meals) had to be flattened into a single list before saving, and rebuilt into a grid when loaded back.
-
-**Paprika export quirks** — The bulk recipe import had to account for how Paprika structures its HTML exports. Section headers (like "For the sauce:") were being parsed as ingredients and had to be filtered out.
+My wife does the actual grocery shopping, which makes her the most important user of this app. A core principle of the project has been to gather her feedback on friction points and missing features before building further — rather than adding features speculatively. That discipline shapes what gets prioritized next.
 
 ---
 
 ## What's Next
 
-Features planned for future development:
-
-- **Maine WIC Approved Product List integration** — Maine WIC publishes a public CSV of every approved product with UPC codes, brand names, and categories. The plan is to build a searchable version into the app, let users star their preferred products in each category, and surface only those starred items on the shopping list.
-- **Printable shopping list** — A clean print or PDF export of the week's shopping list
-- **Vegetarian recipe filter**
-- **Firebase Authentication** — A more robust multi-user login system for the long term
+- **Maine WIC Approved Product List** — Maine WIC publishes a public database of every approved product with UPC codes and categories. The plan is to make it searchable in the app, let users star preferred products per category, and surface only those on the shopping list — solving the hardest part of in-store WIC shopping.
+- **Printable shopping list** — Clean print/PDF export
+- **Firebase Authentication** — More robust multi-user login for the long term
 
 ---
 
 ## Project Context
 
-Built over several weeks in early 2026. All development was done collaboratively with Claude — I described what I wanted in plain language, and we worked through the implementation together session by session. This project represents my first experience building and shipping a web application.
+Built over several weeks in early 2026. I have no programming background. This was conceived, scoped, and shipped entirely through AI-assisted development — which I think of less as a workaround and more as the point.
