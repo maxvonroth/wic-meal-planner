@@ -1294,9 +1294,143 @@
   /* source link */
   .source-link { font-size: 12px; color: var(--wic-blue-mid); text-decoration: none; }
   .source-link:hover { text-decoration: underline; }
+
+  /* ── Lock screen ── */
+  #lock-screen {
+    position: fixed;
+    inset: 0;
+    background: var(--cream);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+  }
+  #lock-screen.hidden { display: none; }
+  .lock-card {
+    background: var(--warm-white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    padding: 40px 36px 32px;
+    width: 100%;
+    max-width: 360px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .lock-icon {
+    font-size: 36px;
+    text-align: center;
+  }
+  .lock-title {
+    font-family: 'Lora', serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--bark);
+    text-align: center;
+  }
+  .lock-sub {
+    font-size: 14px;
+    color: var(--text-secondary);
+    text-align: center;
+    margin-top: -8px;
+  }
+  .lock-input {
+    width: 100%;
+    background: var(--cream);
+    border: 1.5px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: 20px;
+    letter-spacing: 0.3em;
+    padding: 13px 16px;
+    text-align: center;
+    outline: none;
+    font-family: inherit;
+    transition: border-color 0.15s;
+  }
+  .lock-input:focus { border-color: var(--sage); }
+  .lock-input.error {
+    border-color: var(--amber);
+    animation: lock-shake 0.3s ease;
+  }
+  @keyframes lock-shake {
+    0%, 100% { transform: translateX(0); }
+    25%       { transform: translateX(-6px); }
+    75%       { transform: translateX(6px); }
+  }
+  .lock-btn {
+    width: 100%;
+    background: var(--sage);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 15px;
+    font-weight: 500;
+    padding: 13px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: opacity 0.15s;
+  }
+  .lock-btn:hover { opacity: 0.88; }
+  .lock-btn:active { opacity: 0.75; }
+  .lock-remember {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    justify-content: center;
+    user-select: none;
+  }
+  .lock-remember input { accent-color: var(--sage); width: 15px; height: 15px; cursor: pointer; }
+  .lock-error {
+    font-size: 12px;
+    color: var(--amber);
+    text-align: center;
+    min-height: 16px;
+    margin-top: -6px;
+  }
+  .lock-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: center;
+    line-height: 1.6;
+  }
 </style>
 </head>
 <body>
+
+<!-- ── Lock screen — hidden once authenticated ── -->
+<div id="lock-screen">
+  <div class="lock-card">
+    <div class="lock-icon">🌿</div>
+    <div class="lock-title">WIC Meal Planner</div>
+    <div class="lock-sub">Enter your PIN to continue</div>
+    <input
+      class="lock-input"
+      id="pin-input"
+      type="password"
+      inputmode="numeric"
+      maxlength="12"
+      placeholder="••••"
+      autocomplete="current-password"
+      aria-label="PIN"
+    />
+    <div class="lock-error" id="lock-error" aria-live="polite"></div>
+    <button class="lock-btn" id="lock-btn" onclick="checkPin()">Unlock</button>
+    <label class="lock-remember">
+      <input type="checkbox" id="remember-me" checked />
+      Stay unlocked on this device
+    </label>
+    <div class="lock-hint">
+      To set a PIN: open the browser console and run <code>await hashPin('yourPIN')</code>,
+      then paste the result into the <code>AUTH</code> config in the source.
+    </div>
+  </div>
+</div>
 
 <header>
   <div class="logo">
@@ -1746,41 +1880,82 @@ const firebaseConfig = {
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
 const WORKER_URL = 'https://wic-helper.mvonroth.workers.dev';
-let WORKER_PASSWORD = localStorage.getItem('wic_app_password') || '';
+/* ================================================================
+   AUTHENTICATION
+   PIN is stored as a SHA-256 hash — never in plain text.
 
-async function verifyAndSavePassword(password) {
-  const r = await fetch(WORKER_URL + '/', {
-    headers: { 'Content-Type': 'application/json', 'X-App-Password': password }
-  });
-  return r.status !== 401;
+   How to set or change your PIN:
+     1. Open the browser console and run:
+            await hashPin('yourPINhere')
+     2. Copy the resulting hash string
+     3. Paste it as the value of PIN_HASH below
+
+   While PIN_HASH is 'SET_YOUR_HASH_HERE' (the default), the lock
+   screen is skipped entirely — no friction for anyone browsing.
+
+   SESSION_HOURS controls how long a "stay unlocked" session lasts.
+   Changing the PIN automatically invalidates all saved sessions.
+================================================================ */
+const AUTH = {
+  PIN_HASH:      'SET_YOUR_HASH_HERE', // paste your SHA-256 hash here to enable the lock
+  SESSION_HOURS: 72,
+};
+
+async function hashPin(pin) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
+window.hashPin = hashPin;
 
-async function promptForPassword() {
-  while (true) {
-    const entry = prompt('Enter app password to continue:') || '';
-    if (!entry) continue;
-    const valid = await verifyAndSavePassword(entry);
-    if (valid) {
-      WORKER_PASSWORD = entry;
-      localStorage.setItem('wic_app_password', entry);
-      return;
-    } else {
-      alert('Incorrect password, please try again.');
+async function checkPin() {
+  const input = document.getElementById('pin-input');
+  const error = document.getElementById('lock-error');
+  const pin   = input.value.trim();
+  if (!pin) return;
+  const hash = await hashPin(pin);
+  if (hash === AUTH.PIN_HASH) {
+    if (document.getElementById('remember-me').checked) {
+      const expiry = Date.now() + AUTH.SESSION_HOURS * 3600 * 1000;
+      localStorage.setItem('wic_session', JSON.stringify({ hash, expiry }));
     }
+    unlock();
+  } else {
+    error.textContent = 'Incorrect PIN — try again';
+    input.classList.add('error');
+    input.value = '';
+    setTimeout(() => { input.classList.remove('error'); error.textContent = ''; }, 1500);
+    input.focus();
   }
 }
+window.checkPin = checkPin;
 
-if (!WORKER_PASSWORD) {
-  promptForPassword();
-} else {
-  verifyAndSavePassword(WORKER_PASSWORD).then(valid => {
-    if (!valid) {
-      localStorage.removeItem('wic_app_password');
-      WORKER_PASSWORD = '';
-      promptForPassword();
+function unlock() {
+  document.getElementById('lock-screen').classList.add('hidden');
+}
+
+function checkSession() {
+  if (AUTH.PIN_HASH === 'SET_YOUR_HASH_HERE') {
+    unlock();
+    return;
+  }
+  try {
+    const saved = JSON.parse(localStorage.getItem('wic_session') || 'null');
+    if (saved && saved.hash === AUTH.PIN_HASH && saved.expiry > Date.now()) {
+      unlock();
+      return;
     }
+  } catch (e) {}
+  // Show lock screen
+  document.getElementById('pin-input').focus();
+  document.getElementById('pin-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') checkPin();
   });
 }
+
+checkSession();
+
+// ── Worker password (unchanged — used for AI features) ──
+let WORKER_PASSWORD = localStorage.getItem('wic_app_password') || '';
 
 // ── Sync status indicator ──
 function setSyncStatus(state, msg) {
