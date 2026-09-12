@@ -825,6 +825,7 @@
   }
   .week-cell.filled:hover .week-cell-clear { opacity: 1; }
   .week-cell-anchor { border-color: var(--bark) !important; border-width: 2px !important; }
+  .week-cell-leftovers { border-color: var(--border) !important; border-style: solid !important; background: var(--cream) !important; }
   .anchor-dot {
     width: 6px; height: 6px;
     background: var(--bark);
@@ -1779,11 +1780,18 @@
       <button class="modal-close" onclick="closePickerModal()">✕</button>
     </div>
     <div style="padding:1rem 1.75rem;">
-      <div class="search-wrap" style="margin-bottom:1rem;">
+      <div class="search-wrap" style="margin-bottom:0.75rem;">
         <span class="search-icon">🔍</span>
         <input type="text" id="picker-search" placeholder="Search…" oninput="renderPickerList()" autocomplete="off">
       </div>
-      <div id="picker-list" style="max-height:360px;overflow-y:auto;"></div>
+      <div id="picker-leftovers-btn" style="margin-bottom:0.75rem;">
+        <button onclick="markLeftovers(pickerTarget.d, pickerTarget.m)"
+          style="width:100%;text-align:left;padding:9px 12px;border-radius:var(--radius-sm);border:1.5px dashed var(--border-strong);background:var(--cream);font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text-secondary);cursor:pointer;transition:background 0.12s;"
+          onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--cream)'">
+          🍽 Mark as Leftovers
+        </button>
+      </div>
+      <div id="picker-list" style="max-height:320px;overflow-y:auto;"></div>
     </div>
   </div>
 </div>
@@ -1993,10 +2001,10 @@ async function deleteRecipeFromFirestore(id) {
 async function saveWeekPlan() {
   try {
     setSyncStatus('saving', 'Saving…');
-    // Firestore doesn't support nested arrays — flatten to a single array of 14 slots
-    // Slot order: [mon_lunch, mon_dinner, tue_lunch, tue_dinner, ...]
+    // Firestore doesn't support nested arrays — flatten to a single array of 21 slots
+    // Slot order: [mon_breakfast, mon_lunch, mon_dinner, tue_breakfast, tue_lunch, tue_dinner, ...]
     const flatPlan = weekPlan.flat().map(ri =>
-      (ri !== null && allRecipes[ri]) ? allRecipes[ri].id : null
+      ri === 'LEFTOVERS' ? 'LEFTOVERS' : (ri !== null && allRecipes[ri]) ? allRecipes[ri].id : null
     );
     await setDoc(doc(db, 'weekplan', 'current'), {
       flatPlan,
@@ -2029,10 +2037,20 @@ async function loadFromFirestore() {
       const data = planDoc.data();
       // Support both old nested format and new flat format
       const flatPlan = data.flatPlan || (data.plan ? data.plan.flat() : null);
-      if (flatPlan && flatPlan.length === 14) {
-        // Unflatten back to 7x2 grid and convert IDs to indices
+      if (flatPlan && flatPlan.length === 21) {
+        // New format: 7x3 grid (breakfast, lunch, dinner)
         weekPlan = Array.from({length: 7}, (_, d) =>
-          [flatPlan[d * 2], flatPlan[d * 2 + 1]].map(id => {
+          [flatPlan[d * 3], flatPlan[d * 3 + 1], flatPlan[d * 3 + 2]].map(id => {
+            if (!id) return null;
+            if (id === 'LEFTOVERS') return 'LEFTOVERS';
+            const idx = allRecipes.findIndex(r => r.id === id);
+            return idx >= 0 ? idx : null;
+          })
+        );
+      } else if (flatPlan && flatPlan.length === 14) {
+        // Legacy format: 7x2 grid (lunch, dinner only) — migrate by prepending null breakfast slot
+        weekPlan = Array.from({length: 7}, (_, d) =>
+          [null, flatPlan[d * 2], flatPlan[d * 2 + 1]].map(id => {
             if (!id) return null;
             const idx = allRecipes.findIndex(r => r.id === id);
             return idx >= 0 ? idx : null;
@@ -2100,7 +2118,7 @@ window.addEventListener('load', loadFromFirestore);
 <script>
 // ── Global state ──
 let allRecipes = [];
-let weekPlan = Array.from({length:7}, () => [null, null]);
+let weekPlan = Array.from({length:7}, () => [null, null, null]);
 
 // ── WIC Eligibility Engine (based on official Maine WIC food list) ──
 //
@@ -2602,7 +2620,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModalDi
 
 // ══ MEAL PLANNER ══
 const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-const MEALS = ['Lunch','Dinner'];
+const MEALS = ['Breakfast','Lunch','Dinner'];
 
 let anchorIndices = [];
 let pickerTarget = null; // {day, meal}
@@ -2653,14 +2671,13 @@ function addAnchor(index) {
   if (anchorIndices.includes(index) || anchorIndices.length >= 3) return;
   anchorIndices.push(index);
   // Auto-place in first empty slot
-  for (let m = 0; m < 2; m++) {
+  outer: for (let m = 0; m < 3; m++) {
     for (let d = 0; d < 7; d++) {
       if (weekPlan[d][m] === null) {
         weekPlan[d][m] = index;
-        break;
+        break outer;
       }
     }
-    break;
   }
   document.getElementById('anchor-search').value = '';
   document.getElementById('anchor-search-results').innerHTML = '';
@@ -2707,7 +2724,7 @@ function renderSuggestions() {
   if (!anchorIndices.length) { section.style.display = 'none'; return; }
   section.style.display = '';
   const anchorSets = anchorIndices.map(i => getIngredientSet(i));
-  const placedIndices = new Set(weekPlan.flat().filter(x => x !== null));
+  const placedIndices = new Set(weekPlan.flat().filter(x => x !== null && x !== 'LEFTOVERS'));
   const suggestions = allRecipes
     .map((r, i) => ({ i, r, overlap: scoreOverlap(i, anchorSets) }))
     .filter(({i}) => !anchorIndices.includes(i))
@@ -2726,7 +2743,7 @@ function renderSuggestions() {
 }
 
 function addSuggestionToWeek(index) {
-  for (let m = 0; m < 2; m++) {
+  for (let m = 0; m < 3; m++) {
     for (let d = 0; d < 7; d++) {
       if (weekPlan[d][m] === null) {
         weekPlan[d][m] = index;
@@ -2750,9 +2767,14 @@ function renderWeekGrid() {
     html += `<div class="week-row-label">${meal}</div>`;
     DAYS.forEach((_, d) => {
       const ri = weekPlan[d][m];
-      const isAnchor = ri !== null && anchorIndices.includes(ri);
-      if (ri !== null) {
+      if (ri === 'LEFTOVERS') {
+        html += `<div class="week-cell filled week-cell-leftovers">
+          <button class="week-cell-clear" onclick="clearCell(${d},${m})">✕</button>
+          <div class="week-cell-name" style="color:var(--text-muted);">🍽 Leftovers</div>
+        </div>`;
+      } else if (ri !== null) {
         const r = allRecipes[ri];
+        const isAnchor = anchorIndices.includes(ri);
         html += `<div class="week-cell filled ${isAnchor ? 'week-cell-anchor' : ''}">
           <button class="week-cell-clear" onclick="clearCell(${d},${m})">✕</button>
           ${isAnchor ? '<span class="anchor-dot"></span>' : ''}
@@ -2777,7 +2799,7 @@ function clearCell(d, m) {
 }
 
 function clearWeek() {
-  weekPlan = Array.from({length:7}, () => [null, null]);
+  weekPlan = Array.from({length:7}, () => [null, null, null]);
   anchorIndices = [];
   renderAnchorChips();
   renderWeekGrid();
@@ -2793,6 +2815,14 @@ function openPickerModal(d, m) {
   document.getElementById('picker-search').value = '';
   renderPickerList();
   document.getElementById('picker-overlay').classList.add('open');
+}
+
+function markLeftovers(d, m) {
+  weekPlan[d][m] = 'LEFTOVERS';
+  closePickerModal();
+  renderWeekGrid();
+  renderSuggestions();
+  if (window._saveWeekPlan) window._saveWeekPlan();
 }
 
 function closePickerModal() {
@@ -3074,7 +3104,7 @@ function toggleShoppingView() {
 let _lastShoppingData = null;
 
 function renderShopping() {
-  const allPlaced = weekPlan.flat().filter(x => x !== null);
+  const allPlaced = weekPlan.flat().filter(x => x !== null && x !== 'LEFTOVERS');
   if (!allPlaced.length) {
     document.getElementById('shopping-empty').style.display = '';
     document.getElementById('shopping-content').style.display = 'none';
@@ -3566,6 +3596,7 @@ window.removeAnchor = removeAnchor;
 window.renderAnchorSearch = renderAnchorSearch;
 window.addSuggestionToWeek = addSuggestionToWeek;
 window.initPlanner = initPlanner;
+window.markLeftovers = markLeftovers;
 </script>
 </body>
 </html>
