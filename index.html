@@ -1461,6 +1461,7 @@
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn-secondary" onclick="openUrlImport()">🌐 Import from URL</button>
+        <button class="btn-secondary" onclick="openPhotoImport()">📷 Import from Photo</button>
         <button class="btn-primary" onclick="document.getElementById('file-input').click()">📁 Import Paprika Files</button>
       </div>
     </div>
@@ -1866,6 +1867,46 @@
       <!-- Status / preview area -->
       <div id="url-import-status" style="display:none;"></div>
       <div id="url-import-preview" style="display:none;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Photo Import Modal ══ -->
+<div class="modal-overlay" id="photo-import-overlay" onclick="if(event.target===this)closePhotoImport()">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header">
+      <div class="modal-title">📷 Import Recipe from Photo</div>
+      <button class="modal-close" onclick="closePhotoImport()">✕</button>
+    </div>
+    <div style="padding:1.5rem 1.75rem;">
+      <div class="modal-section-title" style="margin-bottom:0.75rem;">Take a photo or choose from your library</div>
+
+      <!-- Photo capture area -->
+      <div id="photo-drop-zone" style="border:2px dashed var(--border-strong);border-radius:var(--radius-lg);padding:2rem;text-align:center;background:var(--cream);margin-bottom:1rem;cursor:pointer;transition:all 0.2s;position:relative;"
+        onclick="document.getElementById('photo-file-input').click()"
+        ondragover="event.preventDefault();this.style.borderColor='var(--sage)'"
+        ondragleave="this.style.borderColor=''"
+        ondrop="handlePhotoDrop(event)">
+        <input type="file" id="photo-file-input" accept="image/*" capture="environment"
+          style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;"
+          onchange="handlePhotoSelect(this.files)">
+        <div id="photo-preview-wrap" style="display:none;margin-bottom:0.75rem;">
+          <img id="photo-preview-img" style="max-width:100%;max-height:200px;border-radius:var(--radius-md);object-fit:contain;" src="" alt="Recipe photo">
+        </div>
+        <div id="photo-drop-hint">
+          <div style="font-size:2.5rem;margin-bottom:0.5rem;">📷</div>
+          <div style="font-size:15px;color:var(--bark);font-weight:500;margin-bottom:4px;">Tap to open camera or choose a photo</div>
+          <div style="font-size:13px;color:var(--text-muted);">Point your camera at a recipe book page</div>
+        </div>
+      </div>
+
+      <div id="photo-import-status" style="display:none;margin-bottom:1rem;"></div>
+      <div id="photo-import-preview" style="display:none;"></div>
+
+      <div style="display:flex;gap:8px;justify-content:flex-end;" id="photo-import-actions">
+        <button class="btn-secondary" onclick="closePhotoImport()">Cancel</button>
+        <button class="btn-primary" id="photo-extract-btn" onclick="startPhotoImport()" style="display:none;">✨ Extract Recipe</button>
+      </div>
     </div>
   </div>
 </div>
@@ -3560,6 +3601,185 @@ function confirmImport() {
   pendingImportRecipe = null;
 }
 
+// ══ PHOTO IMPORT ══
+
+let pendingPhotoFile = null;
+
+function openPhotoImport() {
+  pendingPhotoFile = null;
+  document.getElementById('photo-import-overlay').classList.add('open');
+  document.getElementById('photo-import-status').style.display = 'none';
+  document.getElementById('photo-import-preview').style.display = 'none';
+  document.getElementById('photo-extract-btn').style.display = 'none';
+  document.getElementById('photo-preview-wrap').style.display = 'none';
+  document.getElementById('photo-drop-hint').style.display = '';
+  document.getElementById('photo-file-input').value = '';
+}
+
+function closePhotoImport() {
+  document.getElementById('photo-import-overlay').classList.remove('open');
+  pendingPhotoFile = null;
+}
+
+function handlePhotoDrop(event) {
+  event.preventDefault();
+  document.getElementById('photo-drop-zone').style.borderColor = '';
+  const file = event.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) {
+    loadPhotoPreview(file);
+  }
+}
+
+function handlePhotoSelect(files) {
+  const file = files[0];
+  if (file && file.type.startsWith('image/')) {
+    loadPhotoPreview(file);
+  }
+}
+
+function loadPhotoPreview(file) {
+  pendingPhotoFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('photo-preview-img').src = e.target.result;
+    document.getElementById('photo-preview-wrap').style.display = '';
+    document.getElementById('photo-drop-hint').style.display = 'none';
+    document.getElementById('photo-extract-btn').style.display = '';
+    document.getElementById('photo-import-status').style.display = 'none';
+    document.getElementById('photo-import-preview').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+function setPhotoStatus(type, message) {
+  const el = document.getElementById('photo-import-status');
+  el.style.display = '';
+  if (type === 'loading') {
+    el.innerHTML = `<div class="import-status-box loading"><span class="spinner"></span>${message}</div>`;
+  } else if (type === 'error') {
+    el.innerHTML = `<div class="import-status-box error">⚠️ ${message}</div>`;
+  } else if (type === 'success') {
+    el.innerHTML = `<div class="import-status-box success">✅ ${message}</div>`;
+  }
+}
+
+async function startPhotoImport() {
+  if (!pendingPhotoFile) return;
+
+  const btn = document.getElementById('photo-extract-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Extracting…';
+  document.getElementById('photo-import-preview').style.display = 'none';
+  setPhotoStatus('loading', 'Reading your recipe photo… this takes about 10 seconds');
+
+  try {
+    // Convert image to base64
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(pendingPhotoFile);
+    });
+
+    const mediaType = pendingPhotoFile.type || 'image/jpeg';
+
+    // Send to Cloudflare Worker
+    const response = await fetch(WORKER_URL + '/import-recipe-from-image', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-App-Password': WORKER_PASSWORD
+      },
+      body: JSON.stringify({ imageBase64: base64, mediaType }),
+      signal: AbortSignal.timeout(45000)
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || 'Worker returned an error');
+    }
+
+    const data = await response.json();
+    if (!data.title || !data.ingredients) {
+      throw new Error('Could not find a recipe in this photo. Try a clearer photo or better lighting.');
+    }
+
+    // Build recipe object
+    const recipe = {
+      id: 'photo_' + Date.now(),
+      name: data.title,
+      ingredients: data.ingredients,
+      directions: data.instructions || [],
+      servings: data.servings || '',
+      cookTime: data.cookTime || '',
+      prepTime: data.prepTime || '',
+      stars: 0,
+      sourceLabel: '📷 Photo import',
+      sourceUrl: '',
+      wicScore: calcWicScore(data.ingredients),
+      notes: ''
+    };
+
+    showPhotoImportPreview(recipe);
+
+  } catch (err) {
+    setPhotoStatus('error', err.message || 'Something went wrong. Try again with a clearer photo.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✨ Extract Recipe';
+  }
+}
+
+function showPhotoImportPreview(recipe) {
+  pendingImportRecipe = recipe;
+  setPhotoStatus('success', `Found: "${recipe.name}" — review and confirm below`);
+
+  const preview = document.getElementById('photo-import-preview');
+  preview.style.display = '';
+  preview.innerHTML = `
+    <div class="import-preview-box">
+      <div class="import-preview-name">${recipe.name}</div>
+      <div class="import-preview-meta">
+        ${recipe.cookTime ? `<span>⏱ ${recipe.cookTime}</span>` : ''}
+        ${recipe.servings ? `<span>👥 ${recipe.servings}</span>` : ''}
+        <span>📋 ${recipe.ingredients.length} ingredients</span>
+        <span style="color:var(--sage);">🌿 ${recipe.wicScore}% WIC</span>
+        <span>📷 Photo import</span>
+      </div>
+      <div class="import-preview-ings">
+        ${recipe.ingredients.map(i => {
+          const wic = isWicEligible(i);
+          return `<span style="display:inline-flex;align-items:center;gap:5px;margin-right:12px;">
+            <span style="width:7px;height:7px;border-radius:50%;background:${wic ? '#1E7E34' : '#B03A2E'};flex-shrink:0;display:inline-block;"></span>${i}
+          </span>`;
+        }).join('')}
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:1rem;">
+        <button class="btn-secondary" onclick="closePhotoImport()">Cancel</button>
+        <button class="btn-primary" onclick="confirmPhotoImport()">✅ Add to Library</button>
+      </div>
+    </div>`;
+}
+
+function confirmPhotoImport() {
+  if (!pendingImportRecipe) return;
+  allRecipes.push(pendingImportRecipe);
+  allRecipes.sort((a,b) => a.name.localeCompare(b.name));
+  if (window._saveRecipe) window._saveRecipe(pendingImportRecipe);
+  if (document.getElementById('stats-section').style.display === 'none' && allRecipes.length === 1) {
+    document.getElementById('upload-zone').style.display = 'none';
+    document.getElementById('stats-section').style.display = 'block';
+  }
+  renderLibrary();
+  closePhotoImport();
+  const sub = document.getElementById('library-sub');
+  const prev = sub.textContent;
+  sub.textContent = `✅ "${pendingImportRecipe.name}" added to your library!`;
+  sub.style.color = 'var(--sage)';
+  setTimeout(() => { sub.textContent = prev; sub.style.color = ''; }, 3000);
+  pendingImportRecipe = null;
+}
+
 // ── Expose all functions used by onclick attributes to window scope ──
 // (Required because the Firebase module script creates a separate scope)
 window.showPage = showPage;
@@ -3597,6 +3817,12 @@ window.renderAnchorSearch = renderAnchorSearch;
 window.addSuggestionToWeek = addSuggestionToWeek;
 window.initPlanner = initPlanner;
 window.markLeftovers = markLeftovers;
+window.openPhotoImport = openPhotoImport;
+window.closePhotoImport = closePhotoImport;
+window.handlePhotoSelect = handlePhotoSelect;
+window.handlePhotoDrop = handlePhotoDrop;
+window.startPhotoImport = startPhotoImport;
+window.confirmPhotoImport = confirmPhotoImport;
 </script>
 </body>
 </html>
