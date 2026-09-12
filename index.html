@@ -1871,7 +1871,28 @@
   </div>
 </div>
 
-<!-- ══ Photo Import Modal ══ -->
+<!-- ══ Worker Password Setup Modal ══ -->
+<div class="modal-overlay" id="worker-password-overlay">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <div class="modal-title">🔑 Enter App Password</div>
+    </div>
+    <div style="padding:1.5rem 1.75rem;">
+      <p style="font-size:14px;color:var(--text-secondary);margin:0 0 1rem;">
+        To use AI features (shopping list, recipe import), enter the app password. This is stored on this device so you only need to do it once.
+      </p>
+      <input type="password" id="worker-password-input"
+        placeholder="App password"
+        style="width:100%;padding:10px 12px;border:1.5px solid var(--border-strong);border-radius:var(--radius-sm);font-size:15px;font-family:'DM Sans',sans-serif;box-sizing:border-box;margin-bottom:0.5rem;"
+        onkeydown="if(event.key==='Enter')saveWorkerPassword()">
+      <div id="worker-password-error" style="color:#C0392B;font-size:13px;min-height:18px;margin-bottom:0.75rem;"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn-secondary" onclick="dismissWorkerPassword()">Cancel</button>
+        <button class="btn-primary" onclick="saveWorkerPassword()">Save & Continue</button>
+      </div>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="photo-import-overlay" onclick="if(event.target===this)closePhotoImport()">
   <div class="modal" style="max-width:560px;">
     <div class="modal-header">
@@ -2155,6 +2176,7 @@ window._saveWeekPlan = saveWeekPlan;
 // Expose Worker config so plain script blocks can use it
 window._WORKER_URL = WORKER_URL;
 window._getWorkerPassword = () => WORKER_PASSWORD;
+window._setWorkerPassword = (pw) => { WORKER_PASSWORD = pw; };
 
 // Start loading when page is ready
 window.addEventListener('load', loadFromFirestore);
@@ -3041,9 +3063,13 @@ async function consolidateShoppingList(items) {
     sections[item.section].push({ text: item.text, isWic: item.isWic });
   });
 
-  const response = await fetch(WORKER_URL + '/consolidate-ingredients', {
+  const workerUrl = window._WORKER_URL || 'https://wic-helper.mvonroth.workers.dev';
+  const workerPassword = await getWorkerPassword();
+  if (!workerPassword) throw new Error('App password required');
+
+  const response = await fetch(workerUrl + '/consolidate-ingredients', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-App-Password': WORKER_PASSWORD },
+    headers: { 'Content-Type': 'application/json', 'X-App-Password': workerPassword },
     body: JSON.stringify({ sections })
   });
 
@@ -3203,6 +3229,23 @@ function renderShopping() {
   document.getElementById('print-meta').textContent = weekLabel + ` • ${uniqueRecipes} recipes • ${items.length} items`;
 
   renderShoppingBody(items);
+
+  // Auto-consolidate with AI in the background
+  if (typeof consolidateShoppingList === 'function') {
+    consolidateShoppingList(items).then(consolidated => {
+      const deduped = deduplicateItems(consolidated);
+      window._lastShoppingData = deduped;
+      window._aiSorted = false;
+      renderShoppingBody(deduped);
+      // Update counts
+      const wicC = deduped.filter(i => i.isWic).length;
+      const buyC = deduped.filter(i => !i.isWic).length;
+      document.getElementById('shopping-sub').textContent =
+        `${totalMeals} meals • ${deduped.length} ingredients`;
+    }).catch(() => {
+      // Silently keep the raw list if AI consolidation fails
+    });
+  }
 }
 
 function renderShoppingBody(items) {
@@ -3605,7 +3648,49 @@ function confirmImport() {
   pendingImportRecipe = null;
 }
 
-// ══ PHOTO IMPORT ══
+// ── Worker password setup ──
+let _workerPasswordResolve = null;
+
+function getWorkerPassword() {
+  const pw = localStorage.getItem('wic_app_password') || '';
+  if (pw) return Promise.resolve(pw);
+  // Not set — show the modal and wait for input
+  return new Promise(resolve => {
+    _workerPasswordResolve = resolve;
+    document.getElementById('worker-password-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('worker-password-input').focus(), 100);
+  });
+}
+
+function saveWorkerPassword() {
+  const val = document.getElementById('worker-password-input').value.trim();
+  if (!val) {
+    document.getElementById('worker-password-error').textContent = 'Please enter the app password';
+    return;
+  }
+  localStorage.setItem('wic_app_password', val);
+  // Also update the module-scoped variable via the exposed setter
+  if (window._setWorkerPassword) window._setWorkerPassword(val);
+  document.getElementById('worker-password-overlay').classList.remove('open');
+  document.getElementById('worker-password-input').value = '';
+  document.getElementById('worker-password-error').textContent = '';
+  if (_workerPasswordResolve) {
+    _workerPasswordResolve(val);
+    _workerPasswordResolve = null;
+  }
+}
+
+function dismissWorkerPassword() {
+  document.getElementById('worker-password-overlay').classList.remove('open');
+  document.getElementById('worker-password-input').value = '';
+  if (_workerPasswordResolve) {
+    _workerPasswordResolve('');
+    _workerPasswordResolve = null;
+  }
+}
+
+window.saveWorkerPassword = saveWorkerPassword;
+window.dismissWorkerPassword = dismissWorkerPassword;
 
 let pendingPhotoFile = null;
 
@@ -3689,7 +3774,8 @@ async function startPhotoImport() {
 
     // Send to Cloudflare Worker
     const workerUrl = window._WORKER_URL || 'https://wic-helper.mvonroth.workers.dev';
-    const workerPassword = localStorage.getItem('wic_app_password') || '';
+    const workerPassword = await getWorkerPassword();
+    if (!workerPassword) { setPhotoStatus('error', 'App password required for photo import.'); return; }
     const response = await fetch(workerUrl + '/import-recipe-from-image', {
       method: 'POST',
       headers: {
