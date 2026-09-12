@@ -2152,6 +2152,10 @@ window._saveRecipe = saveRecipeToFirestore;
 window._deleteRecipe = deleteRecipeFromFirestore;
 window._saveWeekPlan = saveWeekPlan;
 
+// Expose Worker config so plain script blocks can use it
+window._WORKER_URL = WORKER_URL;
+window._getWorkerPassword = () => WORKER_PASSWORD;
+
 // Start loading when page is ready
 window.addEventListener('load', loadFromFirestore);
 </script>
@@ -3684,11 +3688,13 @@ async function startPhotoImport() {
     const mediaType = pendingPhotoFile.type || 'image/jpeg';
 
     // Send to Cloudflare Worker
-    const response = await fetch(WORKER_URL + '/import-recipe-from-image', {
+    const workerUrl = window._WORKER_URL;
+    const workerPassword = window._getWorkerPassword ? window._getWorkerPassword() : '';
+    const response = await fetch(workerUrl + '/import-recipe-from-image', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-App-Password': WORKER_PASSWORD
+        'X-App-Password': workerPassword
       },
       body: JSON.stringify({ imageBase64: base64, mediaType }),
       signal: AbortSignal.timeout(45000)
