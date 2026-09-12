@@ -3688,8 +3688,8 @@ async function startPhotoImport() {
     const mediaType = pendingPhotoFile.type || 'image/jpeg';
 
     // Send to Cloudflare Worker
-    const workerUrl = window._WORKER_URL;
-    const workerPassword = window._getWorkerPassword ? window._getWorkerPassword() : '';
+    const workerUrl = window._WORKER_URL || 'https://wic-helper.mvonroth.workers.dev';
+    const workerPassword = localStorage.getItem('wic_app_password') || '';
     const response = await fetch(workerUrl + '/import-recipe-from-image', {
       method: 'POST',
       headers: {
