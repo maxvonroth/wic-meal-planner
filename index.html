@@ -3692,6 +3692,33 @@ function dismissWorkerPassword() {
 window.saveWorkerPassword = saveWorkerPassword;
 window.dismissWorkerPassword = dismissWorkerPassword;
 
+// Resize + compress an image file using canvas before uploading
+function compressImage(file, maxPx, quality) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = e => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxPx || height > maxPx) {
+          if (width > height) { height = Math.round(height * maxPx / width); width = maxPx; }
+          else { width = Math.round(width * maxPx / height); height = maxPx; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve({ base64: dataUrl.split(',')[1], mediaType: 'image/jpeg' });
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 let pendingPhotoFile = null;
 
 function openPhotoImport() {
@@ -3762,15 +3789,8 @@ async function startPhotoImport() {
   setPhotoStatus('loading', 'Reading your recipe photo… this takes about 10 seconds');
 
   try {
-    // Convert image to base64
-    const base64 = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = e => resolve(e.target.result.split(',')[1]);
-      reader.onerror = reject;
-      reader.readAsDataURL(pendingPhotoFile);
-    });
-
-    const mediaType = pendingPhotoFile.type || 'image/jpeg';
+    // Compress image before sending — phone photos are huge and slow over mobile
+    const { base64, mediaType } = await compressImage(pendingPhotoFile, 1200, 0.82);
 
     // Send to Cloudflare Worker
     const workerUrl = window._WORKER_URL || 'https://wic-helper.mvonroth.workers.dev';
@@ -3783,7 +3803,7 @@ async function startPhotoImport() {
         'X-App-Password': workerPassword
       },
       body: JSON.stringify({ imageBase64: base64, mediaType }),
-      signal: AbortSignal.timeout(45000)
+      signal: AbortSignal.timeout(90000)
     });
 
     if (!response.ok) {
