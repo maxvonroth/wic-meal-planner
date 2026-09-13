@@ -3042,9 +3042,13 @@ Rules:
 - Water → other
 - Pickles, olives → condiments`;
 
-  const response = await fetch(WORKER_URL + '/sort-ingredients', {
+  const workerUrl = window._WORKER_URL || 'https://wic-helper.mvonroth.workers.dev';
+  const workerPassword = await getWorkerPassword();
+  if (!workerPassword) throw new Error('App password required');
+
+  const response = await fetch(workerUrl + '/sort-ingredients', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-App-Password': WORKER_PASSWORD },
+    headers: { 'Content-Type': 'application/json', 'X-App-Password': workerPassword },
     body: JSON.stringify({ ingredients: items.map(i => i.text) })
   });
   if (!response.ok) throw new Error('AI sorting failed');
@@ -3421,9 +3425,11 @@ async function fetchWithFallback(url) {
     {
       name: 'worker',
       fetch: async () => {
-        const r = await fetch(WORKER_URL + '/fetch-recipe', {
+        const workerUrl = window._WORKER_URL || 'https://wic-helper.mvonroth.workers.dev';
+        const workerPassword = localStorage.getItem('wic_app_password') || '';
+        const r = await fetch(workerUrl + '/fetch-recipe', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-App-Password': WORKER_PASSWORD },
+          headers: { 'Content-Type': 'application/json', 'X-App-Password': workerPassword },
           body: JSON.stringify({ recipeUrl: url }),
           signal: AbortSignal.timeout(15000)
         });
@@ -3669,14 +3675,16 @@ function saveWorkerPassword() {
     return;
   }
   localStorage.setItem('wic_app_password', val);
-  // Also update the module-scoped variable via the exposed setter
+  // Update module-scoped variable too
   if (window._setWorkerPassword) window._setWorkerPassword(val);
   document.getElementById('worker-password-overlay').classList.remove('open');
   document.getElementById('worker-password-input').value = '';
   document.getElementById('worker-password-error').textContent = '';
   if (_workerPasswordResolve) {
-    _workerPasswordResolve(val);
+    const resolve = _workerPasswordResolve;
     _workerPasswordResolve = null;
+    // Small delay to ensure localStorage write completes before continuing
+    setTimeout(() => resolve(val), 50);
   }
 }
 
