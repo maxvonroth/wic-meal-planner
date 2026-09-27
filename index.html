@@ -3411,7 +3411,10 @@ async function startUrlImport() {
     showImportPreview(recipe, url);
   } catch (err) {
     if (err.message === 'PREVIEW_SHOWN') return;
-    setImportStatus('error', err.message || 'Something went wrong. Try again in a moment.');
+    const displayMsg = err.message
+      ? err.message.replace('WORKER_ERROR: ', '')
+      : 'Something went wrong. Try again in a moment.';
+    setImportStatus('error', displayMsg);
   } finally {
     document.getElementById('url-import-btn').disabled = false;
   }
@@ -3431,11 +3434,11 @@ async function fetchWithFallback(url) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-App-Password': workerPassword },
           body: JSON.stringify({ recipeUrl: url }),
-          signal: AbortSignal.timeout(15000)
+          signal: AbortSignal.timeout(60000)
         });
-        if (!r.ok) throw new Error('Worker fetch failed');
         const data = await r.json();
-        if (data.error) throw new Error(data.error);
+        if (data.error) throw new Error('WORKER_ERROR: ' + data.error);
+        if (!r.ok) throw new Error('WORKER_ERROR: Worker request failed (' + r.status + ')');
         // Worker returns parsed recipe directly, not raw HTML
         if (data.title && data.ingredients) {
           const recipe = {
@@ -3493,7 +3496,8 @@ async function fetchWithFallback(url) {
       if (html && html.length > 500) return html;
       throw new Error('Response too short');
     } catch (e) {
-      if (e.message === 'PREVIEW_SHOWN') throw e; // Worker succeeded — don't swallow this
+      if (e.message === 'PREVIEW_SHOWN') throw e; // Worker succeeded — stop the loop
+      if (e.message && e.message.startsWith('WORKER_ERROR:')) throw e; // Worker gave us a real error — stop and show it
       lastError = e;
       // continue to next proxy
     }
