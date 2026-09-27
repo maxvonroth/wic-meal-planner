@@ -924,6 +924,68 @@
   .shopping-item label { cursor: pointer; line-height: 1.4; flex: 1; }
   .shopping-item label.checked { text-decoration: line-through; color: var(--text-muted); }
   .shopping-qty { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+  .shopping-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .shopping-item:hover .shopping-item-actions { opacity: 1; }
+  .shopping-item-actions button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 2px 5px;
+    border-radius: 4px;
+    color: var(--text-muted);
+    line-height: 1;
+  }
+  .shopping-item-actions button:hover { background: var(--border); color: var(--text-primary); }
+  .shopping-item-edit-input {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    border: 1.5px solid var(--sage-mid);
+    border-radius: var(--radius-sm);
+    padding: 2px 6px;
+    flex: 1;
+    outline: none;
+    color: var(--text-primary);
+    background: var(--warm-white);
+  }
+  .shopping-add-bar {
+    display: flex;
+    gap: 8px;
+    padding: 10px 1.25rem;
+    border-bottom: 2px solid var(--border);
+    background: var(--cream);
+  }
+  .shopping-add-bar input {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    flex: 1;
+    border: 1.5px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    padding: 6px 10px;
+    outline: none;
+    color: var(--text-primary);
+    background: var(--warm-white);
+  }
+  .shopping-add-bar input:focus { border-color: var(--sage-mid); }
+  .shopping-add-bar button {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: var(--sage);
+    color: white;
+    cursor: pointer;
+  }
+  .shopping-add-bar button:hover { background: var(--sage-mid); }
   .wic-dot-inline {
     width: 7px; height: 7px;
     border-radius: 50%;
@@ -3263,9 +3325,10 @@ function renderShoppingBody(items) {
   }
 }
 
-function makeShoppingItem(item, id) {
+function makeShoppingItem(item, id, dataIdx) {
   const cbId = `cb-${id}`;
-  return `<div class="shopping-item">
+  const idx = dataIdx !== undefined ? dataIdx : id;
+  return `<div class="shopping-item" data-idx="${idx}">
     <input type="checkbox" id="${cbId}" onchange="toggleCheck(this)">
     <div style="flex:1;">
       <label for="${cbId}">
@@ -3273,37 +3336,118 @@ function makeShoppingItem(item, id) {
       </label>
       ${item.count > 1 ? `<div class="shopping-qty">Used in ${item.count} recipes</div>` : ''}
     </div>
+    <div class="shopping-item-actions">
+      <button onclick="editShoppingItem(this)" title="Edit">✏️</button>
+      <button onclick="deleteShoppingItem(this)" title="Remove">✕</button>
+    </div>
   </div>`;
 }
 
 function renderWicView(items, container) {
-  const wicItems = items.filter(i => i.isWic);
-  const buyItems = items.filter(i => !i.isWic);
+  const wicItems = items.map((item, idx) => ({item, idx})).filter(({item}) => item.isWic);
+  const buyItems = items.map((item, idx) => ({item, idx})).filter(({item}) => !item.isWic);
 
-  container.innerHTML = `<div class="shopping-columns">
+  container.innerHTML = `
+    ${makeAddItemBar()}
+    <div class="shopping-columns">
     <div class="shopping-col">
       <div class="shopping-col-header wic-col">✅ WIC-Eligible <span style="font-size:12px;font-weight:400;margin-left:4px;">(${wicItems.length})</span></div>
-      ${wicItems.length ? wicItems.map((item,i) => makeShoppingItem(item, 'wic'+i)).join('') : '<div style="padding:1rem 1.25rem;font-size:13px;color:var(--text-muted);font-style:italic;">No WIC items this week</div>'}
+      ${wicItems.length ? wicItems.map(({item,idx}) => makeShoppingItem(item, 'wic'+idx, idx)).join('') : '<div style="padding:1rem 1.25rem;font-size:13px;color:var(--text-muted);font-style:italic;">No WIC items this week</div>'}
     </div>
     <div class="shopping-col">
       <div class="shopping-col-header buy-col">🛍 Buy Yourself <span style="font-size:12px;font-weight:400;margin-left:4px;">(${buyItems.length})</span></div>
-      ${buyItems.length ? buyItems.map((item,i) => makeShoppingItem(item, 'buy'+i)).join('') : '<div style="padding:1rem 1.25rem;font-size:13px;color:var(--text-muted);font-style:italic;">No extra items</div>'}
+      ${buyItems.length ? buyItems.map(({item,idx}) => makeShoppingItem(item, 'buy'+idx, idx)).join('') : '<div style="padding:1rem 1.25rem;font-size:13px;color:var(--text-muted);font-style:italic;">No extra items</div>'}
     </div>
   </div>`;
 }
 
 function renderSectionView(items, container) {
-  let html = '<div class="shopping-sections">';
+  let html = makeAddItemBar() + '<div class="shopping-sections">';
   GROCERY_SECTIONS.forEach(section => {
-    const sectionItems = items.filter(i => i.section === section.key);
+    const sectionItems = items.map((item, idx) => ({item, idx})).filter(({item}) => item.section === section.key);
     if (!sectionItems.length) return;
     html += `<div class="shopping-section-card">
       <div class="shopping-section-header">${section.icon} ${section.label} <span style="font-size:11px;color:var(--text-muted);font-weight:400;text-transform:none;letter-spacing:0;">(${sectionItems.length})</span></div>
-      ${sectionItems.map((item,i) => makeShoppingItem(item, section.key+i)).join('')}
+      ${sectionItems.map(({item,idx}) => makeShoppingItem(item, section.key+idx, idx)).join('')}
     </div>`;
   });
   html += '</div>';
   container.innerHTML = html;
+}
+
+// ── Shopping list: add / edit / delete ──
+
+function makeAddItemBar() {
+  return `<div class="shopping-add-bar no-print">
+    <input type="text" id="shopping-add-input" placeholder="Add an item… (e.g. coffee, bananas, half and half)"
+      onkeydown="if(event.key==='Enter')addShoppingItem()">
+    <button onclick="addShoppingItem()">+ Add</button>
+  </div>`;
+}
+
+function addShoppingItem() {
+  const input = document.getElementById('shopping-add-input');
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+
+  const items = window._lastShoppingData || [];
+  items.push({ text, isWic: false, section: 'other', count: 1, manual: true });
+  window._lastShoppingData = items;
+  renderShoppingBody(items);
+
+  // Refocus the input after re-render
+  const newInput = document.getElementById('shopping-add-input');
+  if (newInput) newInput.focus();
+}
+
+function deleteShoppingItem(btn) {
+  const row = btn.closest('.shopping-item');
+  const idx = parseInt(row.dataset.idx, 10);
+  const items = window._lastShoppingData || [];
+  items.splice(idx, 1);
+  window._lastShoppingData = items;
+  renderShoppingBody(items);
+}
+
+function editShoppingItem(btn) {
+  const row = btn.closest('.shopping-item');
+  const idx = parseInt(row.dataset.idx, 10);
+  const items = window._lastShoppingData || [];
+  const item = items[idx];
+  if (!item) return;
+
+  // Replace the label with an inline input
+  const labelWrap = row.querySelector('div[style]') || row.querySelector('div');
+  const label = row.querySelector('label');
+  const currentText = item.text;
+
+  label.style.display = 'none';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = currentText;
+  input.className = 'shopping-item-edit-input';
+  labelWrap.insertBefore(input, label);
+  input.focus();
+  input.select();
+
+  // Change edit button to a save button
+  btn.textContent = '✓';
+  btn.title = 'Save';
+  btn.onclick = () => saveShoppingItem(btn, idx, input);
+  input.onkeydown = e => {
+    if (e.key === 'Enter') saveShoppingItem(btn, idx, input);
+    if (e.key === 'Escape') renderShoppingBody(window._lastShoppingData);
+  };
+}
+
+function saveShoppingItem(btn, idx, input) {
+  const text = input.value.trim();
+  if (!text) return;
+  const items = window._lastShoppingData || [];
+  if (items[idx]) items[idx].text = text;
+  window._lastShoppingData = items;
+  renderShoppingBody(items);
 }
 
 function toggleCheck(cb) {
@@ -3980,6 +4124,10 @@ window.handlePhotoSelect = handlePhotoSelect;
 window.handlePhotoDrop = handlePhotoDrop;
 window.startPhotoImport = startPhotoImport;
 window.confirmPhotoImport = confirmPhotoImport;
+window.addShoppingItem = addShoppingItem;
+window.editShoppingItem = editShoppingItem;
+window.saveShoppingItem = saveShoppingItem;
+window.deleteShoppingItem = deleteShoppingItem;
 </script>
 </body>
 </html>
