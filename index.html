@@ -1908,7 +1908,7 @@
         ondragover="event.preventDefault();this.style.borderColor='var(--sage)'"
         ondragleave="this.style.borderColor=''"
         ondrop="handlePhotoDrop(event)">
-        <input type="file" id="photo-file-input" accept="image/*" capture="environment"
+        <input type="file" id="photo-file-input" accept="image/*,application/pdf"
           style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;"
           onchange="handlePhotoSelect(this.files)">
         <div id="photo-preview-wrap" style="display:none;margin-bottom:0.75rem;">
@@ -1916,8 +1916,8 @@
         </div>
         <div id="photo-drop-hint">
           <div style="font-size:2.5rem;margin-bottom:0.5rem;">📷</div>
-          <div style="font-size:15px;color:var(--bark);font-weight:500;margin-bottom:4px;">Tap to open camera or choose a photo</div>
-          <div style="font-size:13px;color:var(--text-muted);">Point your camera at a recipe book page</div>
+          <div style="font-size:15px;color:var(--bark);font-weight:500;margin-bottom:4px;">Tap to choose a photo or PDF</div>
+          <div style="font-size:13px;color:var(--text-muted);">Photo of a recipe page, or a PDF printed from a recipe site</div>
         </div>
       </div>
 
@@ -3754,30 +3754,50 @@ function handlePhotoDrop(event) {
   event.preventDefault();
   document.getElementById('photo-drop-zone').style.borderColor = '';
   const file = event.dataTransfer.files[0];
-  if (file && file.type.startsWith('image/')) {
+  if (file && (file.type.startsWith('image/') || file.type === 'application/pdf')) {
     loadPhotoPreview(file);
   }
 }
 
 function handlePhotoSelect(files) {
   const file = files[0];
-  if (file && file.type.startsWith('image/')) {
+  if (file && (file.type.startsWith('image/') || file.type === 'application/pdf')) {
     loadPhotoPreview(file);
   }
 }
 
 function loadPhotoPreview(file) {
   pendingPhotoFile = file;
-  const reader = new FileReader();
-  reader.onload = e => {
-    document.getElementById('photo-preview-img').src = e.target.result;
-    document.getElementById('photo-preview-wrap').style.display = '';
+  const isPdf = file.type === 'application/pdf';
+  if (isPdf) {
+    // For PDFs just show a file name indicator — no image preview
+    const wrap = document.getElementById('photo-preview-wrap');
+    const img = document.getElementById('photo-preview-img');
+    img.style.display = 'none';
+    wrap.innerHTML = `<div style="padding:1rem;background:var(--sage-light);border-radius:var(--radius-md);text-align:center;">
+      <div style="font-size:2rem;">📄</div>
+      <div style="font-size:14px;font-weight:500;color:var(--bark);margin-top:4px;">${file.name}</div>
+      <div style="font-size:12px;color:var(--text-muted);">PDF ready to extract</div>
+    </div>`;
+    wrap.style.display = '';
     document.getElementById('photo-drop-hint').style.display = 'none';
     document.getElementById('photo-extract-btn').style.display = '';
     document.getElementById('photo-import-status').style.display = 'none';
     document.getElementById('photo-import-preview').style.display = 'none';
-  };
-  reader.readAsDataURL(file);
+  } else {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = document.getElementById('photo-preview-img');
+      img.style.display = '';
+      img.src = e.target.result;
+      document.getElementById('photo-preview-wrap').style.display = '';
+      document.getElementById('photo-drop-hint').style.display = 'none';
+      document.getElementById('photo-extract-btn').style.display = '';
+      document.getElementById('photo-import-status').style.display = 'none';
+      document.getElementById('photo-import-preview').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  }
 }
 
 function setPhotoStatus(type, message) {
@@ -3799,11 +3819,23 @@ async function startPhotoImport() {
   btn.disabled = true;
   btn.textContent = '⏳ Extracting…';
   document.getElementById('photo-import-preview').style.display = 'none';
-  setPhotoStatus('loading', 'Reading your recipe photo… this takes about 10 seconds');
+  const isPdf = pendingPhotoFile.type === 'application/pdf';
+  setPhotoStatus('loading', isPdf ? 'Reading your PDF… this takes about 15 seconds' : 'Reading your recipe photo… this takes about 10 seconds');
 
   try {
-    // Compress image before sending — phone photos are huge and slow over mobile
-    const { base64, mediaType } = await compressImage(pendingPhotoFile, 1200, 0.82);
+    // For PDFs send raw base64; for images compress first
+    let base64, mediaType;
+    if (isPdf) {
+      base64 = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(r.result.split(',')[1]);
+        r.onerror = () => rej(new Error('Could not read PDF'));
+        r.readAsDataURL(pendingPhotoFile);
+      });
+      mediaType = 'application/pdf';
+    } else {
+      ({ base64, mediaType } = await compressImage(pendingPhotoFile, 1200, 0.82));
+    }
 
     // Send to Cloudflare Worker
     const workerUrl = window._WORKER_URL || 'https://wic-helper.mvonroth.workers.dev';
@@ -3826,7 +3858,7 @@ async function startPhotoImport() {
 
     const data = await response.json();
     if (!data.title || !data.ingredients) {
-      throw new Error('Could not find a recipe in this photo. Try a clearer photo or better lighting.');
+      throw new Error(isPdf ? 'Could not find a recipe in this PDF. Make sure it contains a full recipe page.' : 'Could not find a recipe in this photo. Try a clearer photo or better lighting.');
     }
 
     // Build recipe object
@@ -3839,7 +3871,7 @@ async function startPhotoImport() {
       cookTime: data.cookTime || '',
       prepTime: data.prepTime || '',
       stars: 0,
-      sourceLabel: '📷 Photo import',
+      sourceLabel: isPdf ? '📄 PDF import' : '📷 Photo import',
       sourceUrl: '',
       wicScore: calcWicScore(data.ingredients),
       notes: ''
