@@ -986,6 +986,27 @@
     cursor: pointer;
   }
   .shopping-add-bar button:hover { background: var(--sage-mid); }
+  .drag-handle {
+    font-size: 16px;
+    color: var(--border-strong);
+    cursor: grab;
+    flex-shrink: 0;
+    padding: 0 2px;
+    line-height: 1;
+    user-select: none;
+  }
+  .drag-handle:active { cursor: grabbing; }
+  .shopping-section-card.drag-over {
+    background: var(--sage-light);
+    border-color: var(--sage-mid);
+    outline: 2px dashed var(--sage-mid);
+  }
+  .shopping-section-drop-hint {
+    padding: 8px 1.25rem;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-style: italic;
+  }
   .wic-dot-inline {
     width: 7px; height: 7px;
     border-radius: 50%;
@@ -3231,10 +3252,37 @@ function goToShopping() {
   showPage('shopping');
 }
 
-function toggleShoppingView() {
-  shoppingViewMode = shoppingViewMode === 'wic' ? 'section' : 'wic';
-  document.getElementById('view-toggle-btn').textContent =
-    shoppingViewMode === 'wic' ? '🗂 By Section' : '✅ By WIC';
+async function toggleShoppingView() {
+  const goingToSection = shoppingViewMode === 'wic';
+  shoppingViewMode = goingToSection ? 'section' : 'wic';
+  const btn = document.getElementById('view-toggle-btn');
+  btn.textContent = goingToSection ? '✅ By WIC' : '🗂 By Section';
+
+  if (goingToSection && !window._aiSorted) {
+    // AI-sort before rendering section view
+    btn.disabled = true;
+    btn.textContent = '⏳ Sorting…';
+    const statusEl = document.getElementById('shopping-sort-status');
+    statusEl.style.display = '';
+    statusEl.style.color = '';
+    statusEl.textContent = 'Asking Claude to sort your ingredients…';
+    try {
+      let items = window._lastShoppingData;
+      items = await sortIngredientsWithAI(items);
+      items = deduplicateItems(items);
+      window._lastShoppingData = items;
+      window._aiSorted = true;
+      statusEl.textContent = '✅ Sorted by store section — drag items to rearrange.';
+      setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
+    } catch(e) {
+      statusEl.textContent = '⚠️ AI sort failed — showing basic sections instead.';
+      statusEl.style.color = '#C0392B';
+      setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
+    }
+    btn.disabled = false;
+    btn.textContent = '✅ By WIC';
+  }
+
   renderShoppingBody(window._lastShoppingData);
 }
 
@@ -3362,17 +3410,60 @@ function renderWicView(items, container) {
 }
 
 function renderSectionView(items, container) {
+  // Always show all sections in section view (including empty ones as drop targets)
   let html = makeAddItemBar() + '<div class="shopping-sections">';
   GROCERY_SECTIONS.forEach(section => {
     const sectionItems = items.map((item, idx) => ({item, idx})).filter(({item}) => item.section === section.key);
-    if (!sectionItems.length) return;
-    html += `<div class="shopping-section-card">
+    html += `<div class="shopping-section-card" data-section="${section.key}"
+      ondragover="event.preventDefault();this.classList.add('drag-over')"
+      ondragleave="this.classList.remove('drag-over')"
+      ondrop="dropToSection(event,this)">
       <div class="shopping-section-header">${section.icon} ${section.label} <span style="font-size:11px;color:var(--text-muted);font-weight:400;text-transform:none;letter-spacing:0;">(${sectionItems.length})</span></div>
-      ${sectionItems.map(({item,idx}) => makeShoppingItem(item, section.key+idx, idx)).join('')}
+      ${sectionItems.length
+        ? sectionItems.map(({item,idx}) => makeDraggableShoppingItem(item, section.key+idx, idx)).join('')
+        : `<div class="shopping-section-drop-hint">Drop items here</div>`}
     </div>`;
   });
   html += '</div>';
   container.innerHTML = html;
+}
+
+function makeDraggableShoppingItem(item, id, dataIdx) {
+  const cbId = `cb-${id}`;
+  const idx = dataIdx !== undefined ? dataIdx : id;
+  return `<div class="shopping-item" data-idx="${idx}" draggable="true"
+    ondragstart="dragShoppingItem(event,${idx})"
+    ondragend="this.style.opacity=''">
+    <span class="drag-handle" title="Drag to move">⠿</span>
+    <input type="checkbox" id="${cbId}" onchange="toggleCheck(this)">
+    <div style="flex:1;">
+      <label for="${cbId}">
+        ${item.isWic ? '<span class="wic-dot-inline"></span> ' : ''}${item.text}
+      </label>
+      ${item.count > 1 ? `<div class="shopping-qty">Used in ${item.count} recipes</div>` : ''}
+    </div>
+    <div class="shopping-item-actions">
+      <button onclick="editShoppingItem(this)" title="Edit">✏️</button>
+      <button onclick="deleteShoppingItem(this)" title="Remove">✕</button>
+    </div>
+  </div>`;
+}
+
+function dragShoppingItem(event, idx) {
+  event.dataTransfer.setData('text/plain', idx);
+  event.target.style.opacity = '0.4';
+}
+
+function dropToSection(event, sectionEl) {
+  event.preventDefault();
+  sectionEl.classList.remove('drag-over');
+  const idx = parseInt(event.dataTransfer.getData('text/plain'), 10);
+  const newSection = sectionEl.dataset.section;
+  const items = window._lastShoppingData;
+  if (!items || isNaN(idx) || !newSection) return;
+  items[idx].section = newSection;
+  window._lastShoppingData = items;
+  renderShoppingBody(items);
 }
 
 // ── Shopping list: add / edit / delete ──
@@ -4128,6 +4219,8 @@ window.addShoppingItem = addShoppingItem;
 window.editShoppingItem = editShoppingItem;
 window.saveShoppingItem = saveShoppingItem;
 window.deleteShoppingItem = deleteShoppingItem;
+window.dragShoppingItem = dragShoppingItem;
+window.dropToSection = dropToSection;
 </script>
 </body>
 </html>
