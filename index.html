@@ -3493,6 +3493,7 @@ async function fetchWithFallback(url) {
       if (html && html.length > 500) return html;
       throw new Error('Response too short');
     } catch (e) {
+      if (e.message === 'PREVIEW_SHOWN') throw e; // Worker succeeded — don't swallow this
       lastError = e;
       // continue to next proxy
     }
